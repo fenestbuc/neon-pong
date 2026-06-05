@@ -1,0 +1,11 @@
+name = "pingpong-leaderboard"
+compatibility_date = "2026-06-05"
+
+# KV namespace binding
+[[kv_namespaces]]
+binding = "PINGPONG_KV"
+id = "your-kv-namespace-id"
+
+# If deploying as a Pages Function instead of standalone Worker:
+# [[pages_build_output_dir]]
+# dir = "public"

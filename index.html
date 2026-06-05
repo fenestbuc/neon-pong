@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Ping Pong — Neon Arcade</title>
+  <link rel="stylesheet" href="src/css/style.css">
+</head>
+<body>
+  <!-- Game canvas -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- UI overlays managed by ui.js -->
+  <div id="ui-container">
+    <!-- Title Screen -->
+    <div id="title-screen" class="overlay active">
+      <h1 class="neon-title">NEON PONG</h1>
+      <p class="subtitle">Arcade Classic Reimagined</p>
+      <div class="menu-buttons">
+        <button id="btn-start" class="btn-neon">START GAME</button>
+        <button id="btn-leaderboard" class="btn-neon">LEADERBOARD</button>
+        <button id="btn-settings" class="btn-neon">SETTINGS</button>
+      </div>
+    </div>
+
+    <!-- HUD (heads-up display, shown during gameplay) -->
+    <div id="hud" class="overlay">
+      <div class="score-display">
+        <span id="score-player" class="neon-text">0</span>
+        <span class="separator">—</span>
+        <span id="score-ai" class="neon-text">0</span>
+      </div>
+      <div id="difficulty-badge" class="badge">MEDIUM</div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-menu" class="overlay">
+      <h2 class="neon-text">PAUSED</h2>
+      <div class="menu-buttons">
+        <button id="btn-resume" class="btn-neon">RESUME</button>
+        <button id="btn-quit" class="btn-neon">QUIT TO MENU</button>
+      </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over" class="overlay">
+      <h2 id="result-text" class="neon-text">GAME OVER</h2>
+      <p id="final-score" class="neon-text"></p>
+      <div class="menu-buttons">
+        <button id="btn-play-again" class="btn-neon">PLAY AGAIN</button>
+        <button id="btn-menu" class="btn-neon">MAIN MENU</button>
+      </div>
+    </div>
+
+    <!-- Leaderboard Screen -->
+    <div id="leaderboard" class="overlay">
+      <h2 class="neon-text">LEADERBOARD</h2>
+      <div id="leaderboard-list" class="leaderboard-table"></div>
+      <button id="btn-leaderboard-back" class="btn-neon">BACK</button>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settings" class="overlay">
+      <h2 class="neon-text">SETTINGS</h2>
+      <div class="setting-row">
+        <label>Player Name</label>
+        <input id="player-name" type="text" maxlength="24" placeholder="Enter your name">
+      </div>
+      <div class="setting-row">
+        <label>Difficulty</label>
+        <select id="difficulty-select">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label>Sound</label>
+        <input id="sound-toggle" type="checkbox" checked>
+      </div>
+      <button id="btn-settings-save" class="btn-neon">SAVE</button>
+      <button id="btn-settings-back" class="btn-neon">BACK</button>
+    </div>
+  </div>
+
+  <!-- Game script -->
+  <script type="module" src="src/js/game.js"></script>
+</body>
+</html>
