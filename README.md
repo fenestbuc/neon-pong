@@ -6,7 +6,9 @@ A retro arcade-style ping pong game built with HTML5 Canvas and vanilla JavaScri
 
 ## Play Now
 
-**[Play Neon Pong](https://neon-pong.pages.dev)** ← Click to play!
+**[Play Neon Pong](https://fenestbuc.github.io/neon-pong/)** ← Click to play!
+
+*(Also available at [neon-pong.pages.dev](https://neon-pong.pages.dev) when Cloudflare deployment is configured)*
 
 ## Features
 
