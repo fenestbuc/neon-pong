@@ -1,0 +1,16 @@
+{
+  "name": "rally-pro-3d",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "python3 -m http.server 8080",
+    "build": "esbuild src/js/game.js --bundle --outfile=dist/game.js --format=esm --minify"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0",
+    "jsdom": "^24.0.0",
+    "esbuild": "^0.21.0"
+  }
+}
