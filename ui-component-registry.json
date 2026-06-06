@@ -1,0 +1,99 @@
+{
+  "components": {
+    "LoadingScreen": {
+      "props": {},
+      "states": ["active", "hidden"],
+      "events": ["onLoadComplete"]
+    },
+    "TitleScreen": {
+      "props": {},
+      "states": ["active", "hidden"],
+      "events": ["onStart", "onCareer", "onTutorial", "onLeaderboard", "onSettings"]
+    },
+    "HUD": {
+      "props": {
+        "playerScore": "number",
+        "aiScore": "number",
+        "playerSets": "number",
+        "aiSets": "number",
+        "server": "'player' | 'ai'",
+        "difficulty": "string",
+        "matchFormat": "string"
+      },
+      "states": ["active", "hidden"],
+      "events": []
+    },
+    "PauseMenu": {
+      "props": {},
+      "states": ["active", "hidden"],
+      "events": ["onResume", "onRestart", "onSettings", "onQuit"]
+    },
+    "GameOverScreen": {
+      "props": {
+        "result": "'victory' | 'defeat'",
+        "playerScore": "number",
+        "aiScore": "number",
+        "playerSets": "number",
+        "aiSets": "number"
+      },
+      "states": ["active", "hidden"],
+      "events": ["onPlayAgain", "onMenu"]
+    },
+    "LeaderboardScreen": {
+      "props": {
+        "entries": "LeaderboardEntry[]"
+      },
+      "states": ["active", "hidden"],
+      "events": ["onBack"]
+    },
+    "SettingsScreen": {
+      "props": {
+        "playerName": "string",
+        "difficulty": "string",
+        "matchFormat": "string",
+        "soundEnabled": "boolean",
+        "musicEnabled": "boolean",
+        "cameraStyle": "string"
+      },
+      "states": ["active", "hidden"],
+      "events": ["onSave", "onBack"]
+    },
+    "TutorialScreen": {
+      "props": {},
+      "states": ["active", "hidden"],
+      "events": ["onClose"]
+    },
+    "MatchSetupScreen": {
+      "props": {},
+      "states": ["active", "hidden"],
+      "events": ["onSelectOpponent", "onBack"]
+    },
+    "CountdownOverlay": {
+      "props": {
+        "number": "number"
+      },
+      "states": ["active", "hidden"],
+      "events": []
+    },
+    "ServePrompt": {
+      "props": {},
+      "states": ["active", "hidden"],
+      "events": ["onServe"]
+    },
+    "PointNotification": {
+      "props": {
+        "text": "string"
+      },
+      "states": ["active", "hidden"],
+      "events": ["onDismiss"]
+    }
+  },
+  "events": {
+    "LeaderboardEntry": {
+      "rank": "number",
+      "name": "string",
+      "score": "number",
+      "date": "string"
+    }
+  }
+}
