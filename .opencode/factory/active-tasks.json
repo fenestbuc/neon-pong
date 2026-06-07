@@ -2,7 +2,7 @@
   "run_id": "rebuild-v2-20250607",
   "branch_prefix": "factory/rebuild-v2",
   "status": "in_progress",
-  "stage": "specification",
+  "stage": "implementation",
   "tasks": [
     {
       "id": "arch-001",
@@ -27,7 +27,7 @@
       "id": "test-001",
       "agent": "test-engineer",
       "description": "Write comprehensive test suites for physics engine, game state, rendering pipeline, input handling, AI",
-      "status": "blocked",
+      "status": "in_progress",
       "branch": "factory/rebuild-v2/tests",
       "inputs": [
         ".opencode/factory/physics-contract.yaml",
@@ -47,7 +47,7 @@
       "id": "ui-001",
       "agent": "ui-designer",
       "description": "Design game UI interfaces: title screen, HUD, menus, overlays with neon retro aesthetic",
-      "status": "blocked",
+      "status": "completed",
       "branch": "factory/rebuild-v2/ui-designer",
       "inputs": [
         ".opencode/factory/ui-component-registry.json",
