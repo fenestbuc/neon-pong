@@ -3,65 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Ping Pong — Neon Arcade</title>
-  <link rel="stylesheet" href="src/css/style.css">
+  <title>Rally Pro 3D — Table Tennis</title>
+  <link rel="stylesheet" href="src/css/theme.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
-  <!-- Game canvas -->
+  <!-- 3D Canvas -->
   <canvas id="gameCanvas"></canvas>
 
-  <!-- UI overlays managed by ui.js -->
+  <!-- UI Overlays -->
   <div id="ui-container">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="overlay active">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading Arena...</p>
+    </div>
+
     <!-- Title Screen -->
-    <div id="title-screen" class="overlay active">
-      <h1 class="neon-title">NEON PONG</h1>
-      <p class="subtitle">Arcade Classic Reimagined</p>
-      <div class="menu-buttons">
-        <button id="btn-start" class="btn-neon">START GAME</button>
-        <button id="btn-leaderboard" class="btn-neon">LEADERBOARD</button>
-        <button id="btn-settings" class="btn-neon">SETTINGS</button>
+    <div id="title-screen" class="overlay">
+      <h1 class="neon-title animate-fade-in-up">Rally Pro 3D</h1>
+      <p class="subtitle animate-fade-in-up" style="animation-delay: 150ms">Professional Table Tennis</p>
+      <div class="menu-buttons animate-fade-in-up" style="animation-delay: 300ms">
+        <button id="btn-start" class="btn-neon btn-neon--primary">Quick Match</button>
+        <button id="btn-career" class="btn-neon">Career Mode</button>
+        <button id="btn-tutorial" class="btn-neon">Tutorial</button>
+        <button id="btn-leaderboard" class="btn-neon">Leaderboard</button>
+        <button id="btn-settings" class="btn-neon">Settings</button>
       </div>
     </div>
 
-    <!-- HUD (heads-up display, shown during gameplay) -->
+    <!-- HUD (shown during gameplay) -->
     <div id="hud" class="overlay">
       <div class="score-display">
-        <span id="score-player" class="neon-text">0</span>
-        <span class="separator">—</span>
-        <span id="score-ai" class="neon-text">0</span>
+        <div class="text-center">
+          <div id="score-player" class="score-digit neon-text--cyan">0</div>
+          <div class="set-score">Sets: <span id="sets-player">0</span></div>
+          <div id="serve-player" class="serve-indicator hidden"></div>
+        </div>
+        <div class="score-separator">—</div>
+        <div class="text-center">
+          <div id="score-ai" class="score-digit neon-text--magenta">0</div>
+          <div class="set-score">Sets: <span id="sets-ai">0</span></div>
+          <div id="serve-ai" class="serve-indicator hidden"></div>
+        </div>
       </div>
-      <div id="difficulty-badge" class="badge">MEDIUM</div>
+      <div class="match-info">
+        <div id="difficulty-badge" class="difficulty-badge">MEDIUM</div>
+        <div id="match-format" class="difficulty-badge">Best of 3</div>
+      </div>
     </div>
 
     <!-- Pause Menu -->
     <div id="pause-menu" class="overlay">
-      <h2 class="neon-text">PAUSED</h2>
+      <h2 class="neon-title" style="font-size: var(--text-3xl)">PAUSED</h2>
       <div class="menu-buttons">
-        <button id="btn-resume" class="btn-neon">RESUME</button>
-        <button id="btn-quit" class="btn-neon">QUIT TO MENU</button>
+        <button id="btn-resume" class="btn-neon btn-neon--primary">RESUME</button>
+        <button id="btn-restart" class="btn-neon">RESTART MATCH</button>
+        <button id="btn-settings-pause" class="btn-neon">SETTINGS</button>
+        <button id="btn-quit" class="btn-neon btn-neon--danger">QUIT TO MENU</button>
       </div>
     </div>
 
     <!-- Game Over Screen -->
     <div id="game-over" class="overlay">
-      <h2 id="result-text" class="neon-text">GAME OVER</h2>
-      <p id="final-score" class="neon-text"></p>
-      <div class="menu-buttons">
-        <button id="btn-play-again" class="btn-neon">PLAY AGAIN</button>
+      <h2 id="result-text" class="neon-title animate-scale-in" style="font-size: var(--text-4xl)">VICTORY</h2>
+      <p id="final-score" class="neon-text animate-fade-in" style="font-size: var(--text-xl); margin-top: var(--space-4)"></p>
+      <p id="match-stats" class="subtitle animate-fade-in"></p>
+      <div class="menu-buttons animate-fade-in-up">
+        <button id="btn-play-again" class="btn-neon btn-neon--primary">PLAY AGAIN</button>
         <button id="btn-menu" class="btn-neon">MAIN MENU</button>
       </div>
     </div>
 
     <!-- Leaderboard Screen -->
     <div id="leaderboard" class="overlay">
-      <h2 class="neon-text">LEADERBOARD</h2>
+      <h2 class="neon-title" style="font-size: var(--text-3xl)">LEADERBOARD</h2>
       <div id="leaderboard-list" class="leaderboard-table"></div>
       <button id="btn-leaderboard-back" class="btn-neon">BACK</button>
     </div>
 
     <!-- Settings Screen -->
     <div id="settings" class="overlay">
-      <h2 class="neon-text">SETTINGS</h2>
+      <h2 class="neon-title" style="font-size: var(--text-3xl)">SETTINGS</h2>
       <div class="setting-row">
         <label>Player Name</label>
         <input id="player-name" type="text" maxlength="24" placeholder="Enter your name">
@@ -72,18 +103,84 @@
           <option value="easy">Easy</option>
           <option value="medium" selected>Medium</option>
           <option value="hard">Hard</option>
+          <option value="expert">Expert</option>
         </select>
       </div>
       <div class="setting-row">
-        <label>Sound</label>
+        <label>Match Format</label>
+        <select id="match-format-select">
+          <option value="best-of-1" selected>Single Game</option>
+          <option value="best-of-3">Best of 3</option>
+          <option value="best-of-5">Best of 5</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label>Sound Effects</label>
         <input id="sound-toggle" type="checkbox" checked>
       </div>
-      <button id="btn-settings-save" class="btn-neon">SAVE</button>
-      <button id="btn-settings-back" class="btn-neon">BACK</button>
+      <div class="setting-row">
+        <label>Music</label>
+        <input id="music-toggle" type="checkbox" checked>
+      </div>
+      <div class="setting-row">
+        <label>Camera Style</label>
+        <select id="camera-select">
+          <option value="dynamic" selected>Dynamic</option>
+          <option value="broadcast">Broadcast</option>
+          <option value="player">Player POV</option>
+        </select>
+      </div>
+      <div class="menu-buttons" style="margin-top: var(--space-6)">
+        <button id="btn-settings-save" class="btn-neon btn-neon--primary">SAVE</button>
+        <button id="btn-settings-back" class="btn-neon">BACK</button>
+      </div>
+    </div>
+
+    <!-- Tutorial Screen -->
+    <div id="tutorial" class="overlay">
+      <h2 class="neon-title" style="font-size: var(--text-3xl)">HOW TO PLAY</h2>
+      <div class="subtitle" style="max-width: 480px; text-align: center; line-height: 1.8; margin-top: var(--space-4)">
+        <p><strong class="neon-text--cyan">Move:</strong> Mouse, Touch, or W/S keys</p>
+        <p><strong class="neon-text--cyan">Serve:</strong> Click to toss, click again to strike</p>
+        <p><strong class="neon-text--cyan">Spin:</strong> Swipe left/right after hit</p>
+        <p><strong class="neon-text--cyan">Pause:</strong> P or Escape</p>
+        <p class="mt-4" style="font-size: var(--text-sm)">First to 11 points wins the game. Win by 2.</p>
+      </div>
+      <div class="menu-buttons">
+        <button id="btn-tutorial-close" class="btn-neon btn-neon--primary">GOT IT</button>
+      </div>
+    </div>
+
+    <!-- Match Setup -->
+    <div id="match-setup" class="overlay">
+      <h2 class="neon-title" style="font-size: var(--text-3xl)">MATCH SETUP</h2>
+      <div class="subtitle mt-4">Choose Your Opponent</div>
+      <div class="menu-buttons" style="margin-top: var(--space-6)">
+        <button id="btn-opponent-easy" class="btn-neon">Novice</button>
+        <button id="btn-opponent-medium" class="btn-neon btn-neon--primary">Club Player</button>
+        <button id="btn-opponent-hard" class="btn-neon">Pro</button>
+        <button id="btn-opponent-expert" class="btn-neon">Champion</button>
+      </div>
+      <button id="btn-setup-back" class="btn-neon mt-8" style="min-width: 120px">BACK</button>
+    </div>
+
+    <!-- Countdown Overlay -->
+    <div id="countdown-overlay" class="overlay" style="background: transparent; backdrop-filter: none;">
+      <div id="countdown-number" class="neon-title" style="font-size: 120px; animation: countdown-pop 1s ease-out forwards">3</div>
+    </div>
+
+    <!-- Serve Prompt -->
+    <div id="serve-prompt" class="overlay" style="background: transparent; backdrop-filter: none; justify-content: flex-end; padding-bottom: 15vh;">
+      <p class="neon-text animate-glow-pulse" style="font-size: var(--text-lg)">Click to Serve</p>
+    </div>
+
+    <!-- Point Notification -->
+    <div id="point-notification" class="overlay" style="background: transparent; backdrop-filter: none;">
+      <p id="point-text" class="neon-title animate-scale-in" style="font-size: var(--text-2xl)"></p>
     </div>
   </div>
 
-  <!-- Game script -->
-  <script type="module" src="src/js/game.js"></script>
+  <!-- Game Script -->
+  <script type="module" src="src/js/main.js"></script>
 </body>
 </html>
