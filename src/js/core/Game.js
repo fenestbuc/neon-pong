@@ -47,6 +47,29 @@ export class Game {
 
     this.settings = this.loadSettings();
     this.applySettings();
+
+    // Safety: loading screen fallback after 3 seconds
+    this._loadingTimeout = setTimeout(() => {
+      console.warn('[Game] Loading fallback triggered — forcing title screen');
+      if (this.ui && this.ui.show) {
+        this.ui.show('title-screen');
+      }
+    }, 3000);
+
+    // Debug helper for remote troubleshooting
+    window.__gameDebug = {
+      version: '2.0.0',
+      game: this,
+      state: () => this.stateMachine?.state,
+      scores: () => this.stateMachine?.scores,
+      ballPos: () => ({ x: this.ball?.position.x, y: this.ball?.position.y, z: this.ball?.position.z }),
+      paddlePos: () => ({ player: this.playerPaddle?.position, ai: this.aiPaddle?.position }),
+      webgl: () => this.sceneManager?.webglAvailable,
+    };
+  }
+
+  log(...args) {
+    console.log('[Game]', ...args);
   }
 
   loadSettings() {
@@ -68,11 +91,14 @@ export class Game {
 
   start() {
     this.running = true;
+    clearTimeout(this._loadingTimeout);
+    this.log('start() — showing title screen');
     this.ui.show('title-screen');
     requestAnimationFrame(this.loop.bind(this));
   }
 
   startMatch(difficulty = 'medium') {
+    this.log('startMatch() — difficulty:', difficulty);
     this.settings.difficulty = difficulty;
     this.applySettings();
     this.stateMachine.resetGame();
@@ -84,6 +110,7 @@ export class Game {
     const overlay = document.getElementById('countdown-number');
     let count = 3;
     overlay.textContent = count;
+    this.log('countdown starting:', count);
 
     const step = () => {
       count--;
@@ -92,6 +119,7 @@ export class Game {
         setTimeout(step, 1000);
       } else {
         // Start playing
+        this.log('countdown complete — starting rally');
         this.stateMachine.transition('COUNTDOWN_COMPLETE');
         this.ui.show('hud');
         this.ball.reset();
@@ -285,8 +313,11 @@ export class Game {
   }
 
   onPointEnd() {
+    this.log('onPointEnd() — scores:', this.stateMachine.scores.player, '-', this.stateMachine.scores.ai);
     if (this.stateMachine.isGameOver()) {
+      this.log('game over — winner:', this.stateMachine.winner);
       if (this.stateMachine.isMatchOver()) {
+        this.log('match over — sets:', this.stateMachine.sets);
         this.stateMachine.transition('MATCH_WON');
         this.ui.show('game-over');
       } else {

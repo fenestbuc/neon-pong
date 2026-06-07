@@ -15,18 +15,34 @@ export class SceneManager {
     this.camera.position.set(-2.5, 1.8, 0.5);
     this.camera.lookAt(0, 0.85, 0);
 
-    this.renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      powerPreference: 'high-performance',
-    });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.4;
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    try {
+      this.renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        powerPreference: 'high-performance',
+      });
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = 1.4;
+      this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+      this.webglAvailable = true;
+    } catch (e) {
+      console.error('WebGL not available:', e);
+      this.webglAvailable = false;
+      // Create a minimal fallback
+      this.renderer = {
+        setSize: () => {},
+        setPixelRatio: () => {},
+        render: () => {},
+        shadowMap: { enabled: false },
+        toneMapping: 0,
+        toneMappingExposure: 1,
+        outputColorSpace: 'srgb',
+      };
+    }
 
     this.setupLighting();
     this.setupFog();
