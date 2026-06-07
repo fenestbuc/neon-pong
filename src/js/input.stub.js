@@ -2,9 +2,15 @@
 // Empty/null implementations for RED-phase test compilation.
 
 export class InputHandler {
-  constructor(_canvas) {
-    this.canvas = _canvas;
+  constructor(canvas) {
+    this.canvas = canvas;
     this.keys = new Set();
+    this._pausePressed = false;
+    this._actionConsumed = false;
+    this._chargingServe = false;
+    this._activeDevice = null;
+    this._touchHistory = [];
+    this._mouse = { x: 0, y: 0 };
   }
 
   init() {}
@@ -18,13 +24,105 @@ export class InputHandler {
     return 0.5;
   }
   isPausePressed() {
-    return false;
+    return this._pausePressed;
   }
   consumeAction() {
-    return false;
+    const val = this._actionConsumed;
+    this._actionConsumed = false;
+    return val;
   }
-  isKeyDown(_code) {
-    return false;
+  isKeyDown(code) {
+    return this.keys.has(code);
+  }
+
+  // Extended 3D input API (RED-phase stubs)
+  handleKeyDown(key) {
+    this.keys.add(key);
+    if (key === 'p' || key === 'P' || key === 'Escape') {
+      this._pausePressed = true;
+    }
+    if (key === ' ' || key === 'Enter') {
+      this._actionConsumed = true;
+    }
+    this._activeDevice = 'keyboard';
+  }
+
+  handleKeyUp(key) {
+    this.keys.delete(key);
+  }
+
+  handleMouseMove(x, y) {
+    this._mouse = { x, y };
+    this._activeDevice = 'mouse';
+  }
+
+  handleMouseDown(_button) {
+    this._chargingServe = true;
+    this._activeDevice = 'mouse';
+  }
+
+  handleMouseUp(_button) {
+    this._chargingServe = false;
+    this._actionConsumed = true;
+  }
+
+  handleTouchMove(touches) {
+    if (touches.length > 0) {
+      this._touchHistory.push({ x: touches[0].clientX, y: touches[0].clientY, time: Date.now() });
+      if (this._touchHistory.length > 10) this._touchHistory.shift();
+    }
+    this._activeDevice = 'touch';
+  }
+
+  handleTouchStart(touches) {
+    this._chargingServe = true;
+    this._activeDevice = 'touch';
+    this._lastTouchStartCount = touches.length;
+  }
+
+  handleTouchEnd() {
+    this._chargingServe = false;
+    this._actionConsumed = true;
+    if (this._lastTouchStartCount >= 2) {
+      this._pausePressed = true;
+    }
+  }
+
+  isChargingServe() {
+    return this._chargingServe;
+  }
+
+  getPaddleTarget() {
+    if (!this.canvas) return { x: 0, z: 0 };
+    const x = (this._mouse.x / this.canvas.width) * 1.525 - 0.7625;
+    const z = (1 - this._mouse.y / this.canvas.height) * 1.37;
+    return { x, z };
+  }
+
+  getActiveDevice() {
+    return this._activeDevice;
+  }
+
+  getTouchJitter() {
+    if (this._touchHistory.length < 2) return 0;
+    let maxDiff = 0;
+    for (let i = 1; i < this._touchHistory.length; i++) {
+      const dx = this._touchHistory[i].x - this._touchHistory[i - 1].x;
+      const dy = this._touchHistory[i].y - this._touchHistory[i - 1].y;
+      maxDiff = Math.max(maxDiff, Math.sqrt(dx * dx + dy * dy));
+    }
+    return maxDiff;
+  }
+
+  getAccessibilityState() {
+    return {
+      activeKeys: Array.from(this.keys),
+      activeDevice: this._activeDevice,
+    };
+  }
+
+  clearPause() {
+    this._pausePressed = false;
   }
 }
 

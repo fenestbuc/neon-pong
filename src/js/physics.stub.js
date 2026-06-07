@@ -2,10 +2,25 @@
 // Empty/null implementations for RED-phase test compilation.
 
 export class PhysicsEngine {
-  constructor(_options) {
-    this.ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 5 };
-    this.leftPaddle = { x: 0, y: 0, width: 10, height: 60 };
-    this.rightPaddle = { x: 0, y: 0, width: 10, height: 60 };
+  constructor(options) {
+    this.config = options?.config ?? {};
+    this.state = {
+      time: 0,
+      time_step: 0,
+      ball: {
+        position: { x: 0, y: 0, z: 0 },
+        velocity: { x: 0, y: 0, z: 0 },
+        spin: { x: 0, y: 0, z: 0 },
+        radius: 0.02,
+        is_in_play: false,
+        last_bounced_side: 'none',
+        bounce_count_player_1: 0,
+        bounce_count_player_2: 0,
+      },
+      paddles: [],
+      collisions_this_frame: [],
+      scoring_events_this_frame: [],
+    };
   }
 
   update(_dt) {}
@@ -18,6 +33,36 @@ export class PhysicsEngine {
   }
   resetBall(_direction) {}
   increaseBallSpeed(_factor) {}
+
+  // 3D Table Tennis contract API (RED-phase stubs)
+  step(deltaTime, _paddleInputs) {
+    this.state.time += deltaTime;
+    this.state.time_step = deltaTime;
+    return this.state;
+  }
+
+  getState() {
+    return this.state;
+  }
+
+  setServeState(_serverId, ballPosition, initialVelocity) {
+    this.state.ball.position = { ...ballPosition };
+    this.state.ball.velocity = { ...initialVelocity };
+  }
+
+  evaluateServe(_serverId, _servePhase) {
+    return null;
+  }
+
+  evaluateRally(_lastHitBy, _bounceHistory) {
+    return null;
+  }
+
+  resetBounceCounters() {
+    this.state.ball.bounce_count_player_1 = 0;
+    this.state.ball.bounce_count_player_2 = 0;
+    this.state.ball.last_bounced_side = 'none';
+  }
 }
 
 export function createPhysicsEngine(options) {
