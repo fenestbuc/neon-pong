@@ -3,87 +3,109 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Ping Pong — Neon Arcade</title>
-  <link rel="stylesheet" href="src/css/style.css">
+  <title>Rally Pro 3D — Neon Arcade</title>
+  <link rel="stylesheet" href="src/css/theme.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
-  <!-- Game canvas -->
   <canvas id="gameCanvas"></canvas>
+  <div id="crt-overlay"></div>
 
-  <!-- UI overlays managed by ui.js -->
-  <div id="ui-container">
-    <!-- Title Screen -->
-    <div id="title-screen" class="overlay active">
-      <h1 class="neon-title">NEON PONG</h1>
-      <p class="subtitle">Arcade Classic Reimagined</p>
-      <div class="menu-buttons">
-        <button id="btn-start" class="btn-neon">START GAME</button>
-        <button id="btn-leaderboard" class="btn-neon">LEADERBOARD</button>
-        <button id="btn-settings" class="btn-neon">SETTINGS</button>
+  <div id="ui-layer">
+    <div id="title-screen" class="ui-screen active">
+      <h1 class="neon-title">RALLY PRO 3D</h1>
+      <p class="neon-subtitle">Neon Arcade Table Tennis</p>
+      <div class="menu-buttons" style="display:flex;flex-direction:column;gap:16px;align-items:center;">
+        <button id="btn-start" class="btn-neon">Start Game</button>
+        <button id="btn-leaderboard" class="btn-neon btn-neon--magenta">Leaderboard</button>
+        <button id="btn-settings" class="btn-neon">Settings</button>
       </div>
     </div>
 
-    <!-- HUD (heads-up display, shown during gameplay) -->
-    <div id="hud" class="overlay">
-      <div class="score-display">
-        <span id="score-player" class="neon-text">0</span>
-        <span class="separator">—</span>
-        <span id="score-ai" class="neon-text">0</span>
+    <div id="difficulty-screen" class="ui-screen">
+      <h2 class="neon-title" style="font-size:24px;">Select Difficulty</h2>
+      <div class="difficulty-cards">
+        <div class="difficulty-card" data-diff="novice"><h3>Novice</h3><p style="font-size:14px;color:var(--color-secondary);">For beginners</p></div>
+        <div class="difficulty-card" data-diff="intermediate"><h3>Intermediate</h3><p style="font-size:14px;color:var(--color-secondary);">Balanced</p></div>
+        <div class="difficulty-card" data-diff="expert"><h3>Expert</h3><p style="font-size:14px;color:var(--color-secondary);">Challenging</p></div>
+        <div class="difficulty-card" data-diff="pro"><h3>Pro</h3><p style="font-size:14px;color:var(--color-secondary);">Arcade master</p></div>
       </div>
-      <div id="difficulty-badge" class="badge">MEDIUM</div>
+      <button id="btn-diff-back" class="btn-neon btn-neon--magenta" style="margin-top:16px;">Back</button>
     </div>
 
-    <!-- Pause Menu -->
-    <div id="pause-menu" class="overlay">
-      <h2 class="neon-text">PAUSED</h2>
-      <div class="menu-buttons">
-        <button id="btn-resume" class="btn-neon">RESUME</button>
-        <button id="btn-quit" class="btn-neon">QUIT TO MENU</button>
+    <div id="hud">
+      <div class="score-panel">
+        <div class="score-value score-player" id="score-player">0</div>
+        <div class="score-label">YOU</div>
+        <div class="score-label" id="sets-player" style="font-size:12px;">Sets: 0</div>
+      </div>
+      <div class="difficulty-badge" id="hud-difficulty">NOVICE</div>
+      <div class="score-panel">
+        <div class="score-value score-ai" id="score-ai">0</div>
+        <div class="score-label">CPU</div>
+        <div class="score-label" id="sets-ai" style="font-size:12px;">Sets: 0</div>
+      </div>
+      <div class="serve-indicator" id="serve-indicator">Your Serve</div>
+    </div>
+
+    <div id="pause-menu" class="ui-screen">
+      <h2 class="neon-title" style="font-size:28px;">PAUSED</h2>
+      <div style="display:flex;flex-direction:column;gap:16px;align-items:center;">
+        <button id="btn-resume" class="btn-neon">Resume</button>
+        <button id="btn-restart" class="btn-neon">Restart</button>
+        <button id="btn-quit" class="btn-neon btn-neon--magenta">Quit to Menu</button>
       </div>
     </div>
 
-    <!-- Game Over Screen -->
-    <div id="game-over" class="overlay">
-      <h2 id="result-text" class="neon-text">GAME OVER</h2>
-      <p id="final-score" class="neon-text"></p>
-      <div class="menu-buttons">
-        <button id="btn-play-again" class="btn-neon">PLAY AGAIN</button>
-        <button id="btn-menu" class="btn-neon">MAIN MENU</button>
+    <div id="game-over" class="ui-screen">
+      <h2 class="neon-title" id="result-text" style="font-size:32px;">GAME OVER</h2>
+      <div style="text-align:center;">
+        <div class="score-value score-player" id="final-score-player" style="display:inline-block;margin:0 16px;">0</div>
+        <span style="font-family:var(--font-display);color:var(--color-text);">—</span>
+        <div class="score-value score-ai" id="final-score-ai" style="display:inline-block;margin:0 16px;">0</div>
+      </div>
+      <p id="final-stats" style="font-family:var(--font-body);color:var(--color-secondary);"></p>
+      <div style="display:flex;flex-direction:column;gap:16px;align-items:center;">
+        <button id="btn-play-again" class="btn-neon">Play Again</button>
+        <button id="btn-menu" class="btn-neon btn-neon--magenta">Main Menu</button>
       </div>
     </div>
 
-    <!-- Leaderboard Screen -->
-    <div id="leaderboard" class="overlay">
-      <h2 class="neon-text">LEADERBOARD</h2>
-      <div id="leaderboard-list" class="leaderboard-table"></div>
-      <button id="btn-leaderboard-back" class="btn-neon">BACK</button>
+    <div id="leaderboard-screen" class="ui-screen">
+      <h2 class="neon-title" style="font-size:24px;">LEADERBOARD</h2>
+      <div class="leaderboard-table" id="leaderboard-table">
+        <div class="leaderboard-row leaderboard-header"><div>Rank</div><div>Player</div><div>Score</div></div>
+      </div>
+      <button id="btn-leaderboard-back" class="btn-neon" style="margin-top:16px;">Back</button>
     </div>
 
-    <!-- Settings Screen -->
-    <div id="settings" class="overlay">
-      <h2 class="neon-text">SETTINGS</h2>
-      <div class="setting-row">
-        <label>Player Name</label>
-        <input id="player-name" type="text" maxlength="24" placeholder="Enter your name">
+    <div id="settings-screen" class="ui-screen">
+      <h2 class="neon-title" style="font-size:24px;">SETTINGS</h2>
+      <div class="settings-grid">
+        <div class="setting-row"><label>Player Name</label><input id="setting-name" type="text" maxlength="16" placeholder="PLAYER"></div>
+        <div class="setting-row"><label>Sets to Win</label><select id="setting-sets"><option value="2">Best of 3</option><option value="3">Best of 5</option></select></div>
+        <div class="setting-row"><label>Sound FX</label><input id="setting-sound" type="checkbox" checked></div>
+        <div class="setting-row"><label>Music</label><input id="setting-music" type="checkbox" checked></div>
+        <div class="setting-row"><label>CRT Effect</label><input id="setting-crt" type="checkbox" checked></div>
       </div>
-      <div class="setting-row">
-        <label>Difficulty</label>
-        <select id="difficulty-select">
-          <option value="easy">Easy</option>
-          <option value="medium" selected>Medium</option>
-          <option value="hard">Hard</option>
-        </select>
+      <div style="display:flex;gap:16px;margin-top:16px;">
+        <button id="btn-settings-save" class="btn-neon">Save</button>
+        <button id="btn-settings-back" class="btn-neon btn-neon--magenta">Back</button>
       </div>
-      <div class="setting-row">
-        <label>Sound</label>
-        <input id="sound-toggle" type="checkbox" checked>
-      </div>
-      <button id="btn-settings-save" class="btn-neon">SAVE</button>
-      <button id="btn-settings-back" class="btn-neon">BACK</button>
+    </div>
+
+    <div id="countdown-screen" class="ui-screen">
+      <div class="countdown-number" id="countdown-number">3</div>
     </div>
   </div>
 
-  <!-- Game script -->
-  <script type="module" src="src/js/game.js"></script>
+  <script type="module" src="src/js/core/Game.js"></script>
 </body>
 </html>
