@@ -66,7 +66,7 @@
       "id": "db-001",
       "agent": "database",
       "description": "Implement leaderboard schema and models",
-      "status": "blocked",
+      "status": "in_progress",
       "branch": "factory/rebuild-v2/database",
       "inputs": [
         ".opencode/factory/db-schema.yaml"
@@ -81,7 +81,7 @@
       "id": "backend-001",
       "agent": "backend",
       "description": "Implement game API: leaderboard, match history, player stats",
-      "status": "blocked",
+      "status": "in_progress",
       "branch": "factory/rebuild-v2/backend",
       "inputs": [
         ".opencode/factory/api-contract.yaml",
@@ -98,7 +98,7 @@
       "id": "frontend-001",
       "agent": "frontend",
       "description": "Implement complete game frontend: Three.js renderer, UI components, game loop, input handling",
-      "status": "blocked",
+      "status": "in_progress",
       "branch": "factory/rebuild-v2/frontend",
       "inputs": [
         ".opencode/factory/ui-component-registry.json",
