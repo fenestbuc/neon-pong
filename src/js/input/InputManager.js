@@ -49,21 +49,27 @@ export class InputManager {
   }
 
   getPaddleZ() {
-    // Map mouse/touch X (left/right) to table Z range [-0.7, 0.7]
-    // From behind the table: mouse left → paddle left (negative Z)
-    //                       mouse right → paddle right (positive Z)
-    const rect = this.canvasRect || { left: 0, width: window.innerWidth };
-    const x = this.mouseX || (rect.left + rect.width / 2);
-    const normalized = (x - rect.left) / rect.width;
-    // Invert: left side of screen = left side of table (negative Z)
-    // But actually from behind: screen left = table left? No.
-    // From behind player looking toward opponent:
-    // screen left = table right (positive Z)? No.
-    // Let me think: if I'm behind the table facing forward,
-    // my left is the table's left side (negative Z if Z is across the table)
-    // Actually in Three.js: +Z is toward camera (bottom), -Z is away (top)
-    // So screen left = -Z, screen right = +Z
-    return Math.max(-0.7, Math.min(0.7, (normalized * 1.4) - 0.7));
+    const rect = this.canvasRect || { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+
+    // Use BOTH mouse X and Y for paddle control — whichever has moved more from center
+    // This lets users drag diagonally or in any direction to control the paddle
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const mouseX = this.mouseX || centerX;
+    const mouseY = this.mouseY || centerY;
+
+    // Normalize both axes to [-0.7, 0.7]
+    const xNormalized = ((mouseX - rect.left) / rect.width * 1.4) - 0.7;
+    const yNormalized = ((mouseY - rect.top) / rect.height * 1.4) - 0.7;
+
+    // Use the Y axis (up/down on screen) as primary — most intuitive for casual players
+    // Moving mouse UP → paddle goes to top side of table (negative Z)
+    // Moving mouse DOWN → paddle goes to bottom side of table (positive Z)
+    // Also blend in X axis so diagonal movement works
+    const blended = yNormalized * 0.7 + xNormalized * 0.3;
+
+    return Math.max(-0.7, Math.min(0.7, blended));
   }
 
   onTouchStart(e) {
