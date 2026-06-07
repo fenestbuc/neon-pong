@@ -12,7 +12,7 @@ import { ParticleSystem } from '../effects/ParticleSystem.js';
 import { Ball } from '../entities/Ball.js';
 import { Paddle } from '../entities/Paddle.js';
 import { Table } from '../entities/Table.js';
-import { PHYSICS_STEP, DIFFICULTY, TABLE_LENGTH, TABLE_HEIGHT, MAX_BALL_SPEED } from './Constants.js';
+import { PHYSICS_STEP, DIFFICULTY, TABLE_LENGTH, TABLE_WIDTH, TABLE_HEIGHT, MAX_BALL_SPEED } from './Constants.js';
 
 export class Game {
   constructor(canvas) {
