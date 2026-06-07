@@ -13,6 +13,7 @@ import { Ball } from '../entities/Ball.js';
 import { Paddle } from '../entities/Paddle.js';
 import { Table } from '../entities/Table.js';
 import { PHYSICS_STEP, DIFFICULTY, TABLE_LENGTH, TABLE_WIDTH, TABLE_HEIGHT, MAX_BALL_SPEED } from './Constants.js';
+import * as THREE from 'three';
 
 export class Game {
   constructor(canvas) {
@@ -41,6 +42,10 @@ export class Game {
     this.hud = new HUD();
     this.audio = new AudioManager();
     this.particles = new ParticleSystem(this.sceneManager.scene);
+
+    // Raycaster for mouse-to-world paddle control
+    this.raycaster = new THREE.Raycaster();
+    this.mousePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(TABLE_HEIGHT + 0.14));
 
     this.input.bind(canvas);
     this.input.onPause = () => this.togglePause();
@@ -228,19 +233,40 @@ export class Game {
       this.ball.velocity.z *= scale;
     }
 
-    // AI movement
+    // Player movement — true 2D mouse tracking via raycasting
+    const axis = this.input.getVerticalAxis();
+    if (axis !== 0) {
+      // Keyboard fallback: only Z axis
+      this.playerPaddle.position.z += axis * 2.5 * dt;
+      this.playerPaddle.position.z = Math.max(-0.7, Math.min(0.7, this.playerPaddle.position.z));
+    } else {
+      // Mouse/touch: Raycast from camera through cursor to paddle plane
+      const mouse = this.input.getMouseNormalized();
+      if (mouse) {
+        this.raycaster.setFromCamera(
+          new THREE.Vector2(mouse.x * 2 - 1, -(mouse.y * 2 - 1)),
+          this.sceneManager.camera
+        );
+        const target = new THREE.Vector3();
+        this.raycaster.ray.intersectPlane(this.mousePlane, target);
+        if (target) {
+          // Clamp paddle to player's half of the table
+          this.playerPaddle.position.x = Math.max(
+            -TABLE_LENGTH / 2 - 0.3,
+            Math.min(-0.2, target.x)
+          );
+          this.playerPaddle.position.z = Math.max(
+            -TABLE_WIDTH / 2 + 0.1,
+            Math.min(TABLE_WIDTH / 2 - 0.1, target.z)
+          );
+        }
+      }
+    }
+
+    // AI movement (still 1D for now)
     const aiMove = this.ai.getMove(this.ball, this.aiPaddle, dt);
     this.aiPaddle.position.z += aiMove;
     this.aiPaddle.position.z = Math.max(-0.7, Math.min(0.7, this.aiPaddle.position.z));
-
-    // Player movement from input
-    const axis = this.input.getVerticalAxis();
-    if (axis !== 0) {
-      this.playerPaddle.position.z += axis * 2.5 * dt;
-    } else {
-      this.playerPaddle.position.z = this.input.getPaddleZ();
-    }
-    this.playerPaddle.position.z = Math.max(-0.7, Math.min(0.7, this.playerPaddle.position.z));
 
     // Paddle collisions
     if (this.checkPaddleHit(this.ball, this.playerPaddle)) {
