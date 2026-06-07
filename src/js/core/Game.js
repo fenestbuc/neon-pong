@@ -232,12 +232,6 @@ export class Game {
       this.ball.velocity.z *= scale;
     }
 
-    // Player movement — true 2D mouse tracking via raycasting
-    const axis = this.input.getVerticalAxis();
-    if (axis !== 0) {
-      // Keyboard fallback: only Z axis
-      this.playerPaddle.position.z += axis * 2.5 * dt;
-      this.playerPaddle.position.z = Math.max(-0.7, Math.min(0.7, this.playerPaddle.position.z));
     // Player movement — true 3D paddle control
     const axis = this.input.getVerticalAxis();
     if (axis !== 0) {
