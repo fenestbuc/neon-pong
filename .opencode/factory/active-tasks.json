@@ -8,7 +8,7 @@
       "id": "arch-001",
       "agent": "architect",
       "description": "Design complete game architecture: contracts, DB schema, component registry, physics API",
-      "status": "in_progress",
+      "status": "completed",
       "branch": "factory/rebuild-v2/architect",
       "inputs": [
         "design-system/rally-pro-3d/MASTER.md",

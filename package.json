@@ -1,0 +1,14 @@
+{
+  "name": "rally-pro-3d",
+  "version": "1.0.0",
+  "description": "3D Table Tennis Game — Rally Pro 3D",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.1"
+  }
+}
