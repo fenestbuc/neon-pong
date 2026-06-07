@@ -204,13 +204,17 @@ export class GameRenderer {
     }
     this.meshes.trail.geometry.attributes.position.needsUpdate = true;
 
-    // Update paddles with new Y offset
-    this.meshes.playerPaddle.position.z = playerPaddle.position.z;
-    this.meshes.aiPaddle.position.z = aiPaddle.position.z;
-
-    // Subtle floating animation for paddles
-    this.meshes.playerPaddle.position.y = TABLE_HEIGHT + 0.14 + Math.sin(Date.now() * 0.002) * 0.005;
-    this.meshes.aiPaddle.position.y = TABLE_HEIGHT + 0.14 + Math.sin(Date.now() * 0.002 + 1) * 0.005;
+    // Update paddles — copy all 3 position axes from game state
+    this.meshes.playerPaddle.position.set(
+      playerPaddle.position.x,
+      playerPaddle.position.y,
+      playerPaddle.position.z
+    );
+    this.meshes.aiPaddle.position.set(
+      aiPaddle.position.x,
+      aiPaddle.position.y,
+      aiPaddle.position.z
+    );
   }
 
   render() {
