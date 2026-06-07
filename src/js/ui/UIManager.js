@@ -26,7 +26,8 @@ export class UIManager {
 
   bindButtons() {
     const map = {
-      'btn-start': () => this.game.startMatch('medium'),
+      'btn-start': () => this.show('match-setup'),
+      'btn-career': () => this.showCareerMode(),
       'btn-resume': () => this.game.resume(),
       'btn-restart': () => this.game.restart(),
       'btn-quit': () => this.game.quitToMenu(),
@@ -35,16 +36,31 @@ export class UIManager {
       'btn-settings': () => this.show('settings'),
       'btn-settings-back': () => this.show('title-screen'),
       'btn-settings-save': () => this.saveSettings(),
+      'btn-settings-pause': () => this.show('settings'),
       'btn-leaderboard': () => this.show('leaderboard'),
       'btn-leaderboard-back': () => this.show('title-screen'),
       'btn-tutorial': () => this.show('tutorial'),
       'btn-tutorial-close': () => this.show('title-screen'),
+      'btn-setup-back': () => this.show('title-screen'),
+      'btn-opponent-easy': () => this.startMatch('easy'),
+      'btn-opponent-medium': () => this.startMatch('medium'),
+      'btn-opponent-hard': () => this.startMatch('hard'),
+      'btn-opponent-expert': () => this.startMatch('expert'),
     };
 
     Object.entries(map).forEach(([id, fn]) => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('click', fn);
     });
+  }
+
+  startMatch(difficulty) {
+    this.game.startMatch(difficulty);
+  }
+
+  showCareerMode() {
+    // Career mode is not yet implemented; show a placeholder message
+    alert('Career Mode coming soon!\n\nProgression through amateur, club, national, and world championships with skills upgrades and equipment unlocks.');
   }
 
   show(id) {

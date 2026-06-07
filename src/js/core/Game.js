@@ -74,11 +74,36 @@ export class Game {
     this.stateMachine.transition('START');
     this.ui.show('countdown-overlay');
     this.cameraManager.setMode('player');
-    setTimeout(() => {
-      this.stateMachine.transition('COUNTDOWN_COMPLETE');
-      this.ui.show('hud');
-      this.ball.reset();
-    }, 3000);
+
+    // Countdown: 3 → 2 → 1 → Go!
+    const overlay = document.getElementById('countdown-number');
+    let count = 3;
+    overlay.textContent = count;
+
+    const step = () => {
+      count--;
+      if (count > 0) {
+        overlay.textContent = count;
+        setTimeout(step, 1000);
+      } else {
+        // Start playing
+        this.stateMachine.transition('COUNTDOWN_COMPLETE');
+        this.ui.show('hud');
+        this.ball.reset();
+        this.serveBall();
+      }
+    };
+    setTimeout(step, 1000);
+  }
+
+  serveBall() {
+    // Serve from server's side with slight randomness
+    const isPlayerServe = this.stateMachine.server === 'player';
+    const sideX = isPlayerServe ? -1.2 : 1.2;
+    this.ball.position.set(sideX * 0.6, 0.3, (Math.random() - 0.5) * 0.4);
+    const speedX = isPlayerServe ? 6 : -6;
+    this.ball.velocity.set(speedX, 0, (Math.random() - 0.5) * 2);
+    this.ball.bounceCount = 0;
   }
 
   restart() {
@@ -140,7 +165,13 @@ export class Game {
 
     // Player movement from input
     const axis = this.input.getVerticalAxis();
-    this.playerPaddle.position.z += axis * 2.5 * dt;
+    if (axis !== 0) {
+      // Keyboard control
+      this.playerPaddle.position.z += axis * 2.5 * dt;
+    } else {
+      // Mouse / touch control
+      this.playerPaddle.position.z = this.input.getPaddleZ();
+    }
     this.playerPaddle.position.z = Math.max(-0.7, Math.min(0.7, this.playerPaddle.position.z));
 
     // Check double bounce

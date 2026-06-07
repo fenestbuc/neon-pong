@@ -2,7 +2,9 @@ export class InputManager {
   constructor() {
     this.keys = new Set();
     this.mouseY = 0;
+    this.mouseX = 0;
     this.touchY = 0;
+    this.touchX = 0;
     this.touchStartY = 0;
     this.touchStartX = 0;
     this.lastTouchY = 0;
@@ -11,17 +13,23 @@ export class InputManager {
     this.spinGesture = null;
     this.onPause = null;
     this.canvas = null;
+    this.canvasRect = null;
   }
 
   bind(canvas) {
     this.canvas = canvas;
-    canvas.addEventListener('keydown', this.onKeyDown.bind(this));
-    canvas.addEventListener('keyup', this.onKeyUp.bind(this));
-    canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
-    canvas.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
-    canvas.addEventListener('touchend', this.onTouchEnd.bind(this));
-    canvas.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
-    canvas.setAttribute('tabindex', '0');
+    this.canvasRect = canvas.getBoundingClientRect();
+
+    document.addEventListener('keydown', this.onKeyDown.bind(this));
+    document.addEventListener('keyup', this.onKeyUp.bind(this));
+    document.addEventListener('mousemove', this.onMouseMove.bind(this));
+    document.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
+    document.addEventListener('touchend', this.onTouchEnd.bind(this));
+    document.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
+
+    window.addEventListener('resize', () => {
+      if (this.canvas) this.canvasRect = this.canvas.getBoundingClientRect();
+    });
   }
 
   onKeyDown(e) {
@@ -36,7 +44,16 @@ export class InputManager {
   }
 
   onMouseMove(e) {
+    this.mouseX = e.clientX;
     this.mouseY = e.clientY;
+  }
+
+  getPaddleZ() {
+    // Map mouse/touch Y to table Z range [-0.7, 0.7]
+    const rect = this.canvasRect || { top: 0, height: window.innerHeight };
+    const normalized = (this.mouseY - rect.top) / rect.height;
+    // clamp
+    return Math.max(-0.7, Math.min(0.7, (normalized * 1.4) - 0.7));
   }
 
   onTouchStart(e) {
@@ -47,6 +64,8 @@ export class InputManager {
       this.lastTouchY = t.clientY;
       this.lastTouchX = t.clientX;
       this.touchY = t.clientY;
+      this.touchX = t.clientX;
+      this.mouseY = t.clientY; // mirror for paddle control
     }
   }
 
@@ -54,6 +73,8 @@ export class InputManager {
     if (e.touches.length > 0) {
       const t = e.touches[0];
       this.touchY = t.clientY;
+      this.touchX = t.clientX;
+      this.mouseY = t.clientY; // mirror for paddle control
     }
   }
 
@@ -70,7 +91,6 @@ export class InputManager {
       this.lastGesture = null;
     }
 
-    // Map horizontal swipes to spin gestures for tests
     if (Math.abs(dx) > threshold && Math.abs(dx) > Math.abs(dy)) {
       this.spinGesture = dx < 0 ? 'backspin' : 'topspin';
     } else {
@@ -91,13 +111,13 @@ export class InputManager {
 
   getLastGesture() {
     const g = this.lastGesture;
-    this.lastGesture = null; // consume
+    this.lastGesture = null;
     return g;
   }
 
   getSpinGesture() {
     const g = this.spinGesture;
-    this.spinGesture = null; // consume
+    this.spinGesture = null;
     return g;
   }
 }
