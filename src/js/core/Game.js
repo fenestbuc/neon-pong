@@ -179,7 +179,10 @@ export class Game {
 
     if (this.stateMachine.state === 'PLAYING' || this.stateMachine.state === 'SERVING') {
       this.accumulator += dt;
-      while (this.accumulator >= PHYSICS_STEP) {
+      while (
+        this.accumulator >= PHYSICS_STEP &&
+        (this.stateMachine.state === 'PLAYING' || this.stateMachine.state === 'SERVING')
+      ) {
         this.updatePhysics(PHYSICS_STEP);
         this.accumulator -= PHYSICS_STEP;
       }
