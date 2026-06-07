@@ -43,9 +43,8 @@ export class Game {
     this.audio = new AudioManager();
     this.particles = new ParticleSystem(this.sceneManager.scene);
 
-    // Raycaster for mouse-to-world paddle control
+    // Raycaster for true 3D mouse-to-world paddle control
     this.raycaster = new THREE.Raycaster();
-    this.mousePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(TABLE_HEIGHT + 0.14));
 
     this.input.bind(canvas);
     this.input.onPause = () => this.togglePause();
@@ -239,26 +238,39 @@ export class Game {
       // Keyboard fallback: only Z axis
       this.playerPaddle.position.z += axis * 2.5 * dt;
       this.playerPaddle.position.z = Math.max(-0.7, Math.min(0.7, this.playerPaddle.position.z));
+    // Player movement — true 3D paddle control
+    const axis = this.input.getVerticalAxis();
+    if (axis !== 0) {
+      // Keyboard fallback: only Z axis
+      this.playerPaddle.position.z += axis * 2.5 * dt;
+      this.playerPaddle.position.z = Math.max(-0.7, Math.min(0.7, this.playerPaddle.position.z));
     } else {
-      // Mouse/touch: Raycast from camera through cursor to paddle plane
+      // Mouse/touch: Full 3D raycast control
       const mouse = this.input.getMouseNormalized();
       if (mouse) {
         this.raycaster.setFromCamera(
           new THREE.Vector2(mouse.x * 2 - 1, -(mouse.y * 2 - 1)),
           this.sceneManager.camera
         );
-        const target = new THREE.Vector3();
-        this.raycaster.ray.intersectPlane(this.mousePlane, target);
+        
+        // Position paddle along ray at varying distance based on screen Y
+        // Top of screen (mouse.y=0) → paddle closer to player (further back)
+        // Bottom of screen (mouse.y=1) → paddle closer to table (further forward)
+        const distance = 2.0 + (1.0 - mouse.y) * 2.0; // 2.0 to 4.0 units from camera
+        const target = new THREE.Vector3().copy(this.raycaster.ray.origin)
+          .add(this.raycaster.ray.direction.clone().multiplyScalar(distance));
+        
         if (target) {
-          // Clamp paddle to player's half of the table
-          this.playerPaddle.position.x = Math.max(
-            -TABLE_LENGTH / 2 - 0.3,
-            Math.min(-0.2, target.x)
-          );
-          this.playerPaddle.position.z = Math.max(
-            -TABLE_WIDTH / 2 + 0.1,
-            Math.min(TABLE_WIDTH / 2 - 0.1, target.z)
-          );
+          // Smooth lerp for natural feel
+          const lerpFactor = 0.3;
+          this.playerPaddle.position.x += (target.x - this.playerPaddle.position.x) * lerpFactor;
+          this.playerPaddle.position.y += (target.y - this.playerPaddle.position.y) * lerpFactor;
+          this.playerPaddle.position.z += (target.z - this.playerPaddle.position.z) * lerpFactor;
+          
+          // Soft bounds (allow some freedom beyond table)
+          this.playerPaddle.position.x = Math.max(-4.0, Math.min(-0.1, this.playerPaddle.position.x));
+          this.playerPaddle.position.y = Math.max(0.5, Math.min(2.5, this.playerPaddle.position.y));
+          this.playerPaddle.position.z = Math.max(-2.0, Math.min(2.0, this.playerPaddle.position.z));
         }
       }
     }
