@@ -42,13 +42,14 @@ vi.mock('three', () => {
       constructor(fov, aspect, near, far) { super(); this.fov = fov; this.aspect = aspect; this.near = near; this.far = far; }
     },
     WebGLRenderer: class {
-      constructor() {}
+      constructor() {
+        this.shadowMap = { enabled: false };
+        this.toneMapping = 0;
+        this.domElement = document.createElement('canvas');
+      }
       setSize() {}
       setPixelRatio() {}
-      shadowMap: { enabled: false }
-      toneMapping: 0
       render() {}
-      domElement: document.createElement('canvas')
     },
     BoxGeometry: class {},
     SphereGeometry: class {},

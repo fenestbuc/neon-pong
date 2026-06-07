@@ -1,0 +1,122 @@
+{
+  "run_id": "feat-table-tennis-3d-20260606",
+  "branch_prefix": "factory/feat-table-tennis-3d",
+  "status": "Stage 3: Parallel Implementation",
+  "lock": {
+    "locked": true,
+    "since": "2026-06-06T15:30:00Z",
+    "owner": "orchestrator"
+  },
+  "tasks": [
+    {
+      "id": "github-pages-delete-001",
+      "agent": "orchestrator",
+      "description": "Delete GitHub Pages mirror for fenestbuc/neon-pong",
+      "status": "completed",
+      "branch": "main",
+      "inputs": [],
+      "outputs": ["github-pages-disabled"],
+      "depends_on": []
+    },
+    {
+      "id": "qa-audit-001",
+      "agent": "qa",
+      "description": "Thorough QA and audit of current deployed website",
+      "status": "failed",
+      "branch": "factory/feat-table-tennis-3d/qa-audit",
+      "inputs": ["https://neon-pong-c76.pages.dev"],
+      "outputs": ["qa-audit-report.md"],
+      "depends_on": []
+    },
+    {
+      "id": "arch-001",
+      "agent": "architect",
+      "description": "Design table tennis 3D game architecture, design language, and spec",
+      "status": "completed",
+      "branch": "factory/feat-table-tennis-3d/architect",
+      "inputs": ["src/", "index.html", "ui-spec.md", "design-decisions.md"],
+      "outputs": [".opencode/factory/game-spec.md", ".opencode/factory/design-system.md", ".opencode/factory/tech-spec.md"],
+      "depends_on": ["github-pages-delete-001", "qa-audit-001"]
+    },
+    {
+      "id": "test-001",
+      "agent": "test-engineer",
+      "description": "Write failing tests for table tennis 3D game",
+      "status": "completed",
+      "branch": "factory/feat-table-tennis-3d/tests",
+      "inputs": [".opencode/factory/game-spec.md"],
+      "outputs": ["tests/game.test.js", "tests/renderer.test.js", "tests/ui.test.js"],
+      "depends_on": ["arch-001"]
+    },
+    {
+      "id": "ui-001",
+      "agent": "ui-designer",
+      "description": "Design UI/UX component interfaces and 3D theme system",
+      "status": "completed",
+      "branch": "factory/feat-table-tennis-3d/ui-design",
+      "inputs": [".opencode/factory/design-system.md", ".opencode/factory/tech-spec.md"],
+      "outputs": ["src/css/design-tokens.css", "ui-component-registry.json"],
+      "depends_on": ["arch-001"]
+    },
+    {
+      "id": "frontend-001",
+      "agent": "frontend",
+      "description": "Implement 3D table tennis game with WebGL/Three.js",
+      "status": "in_progress",
+      "branch": "factory/feat-table-tennis-3d/frontend",
+      "inputs": [".opencode/factory/game-spec.md", ".opencode/factory/tech-spec.md", "tests/"],
+      "outputs": ["src/js/", "index.html", "src/css/"],
+      "depends_on": ["test-001", "ui-001"]
+    },
+    {
+      "id": "integrator-001",
+      "agent": "integrator",
+      "description": "Merge branches and validate integration",
+      "status": "blocked",
+      "branch": "factory/feat-table-tennis-3d/integration",
+      "inputs": ["factory/feat-table-tennis-3d/tests", "factory/feat-table-tennis-3d/frontend", "factory/feat-table-tennis-3d/ui-design"],
+      "outputs": ["merged-branch"],
+      "depends_on": ["frontend-001"]
+    },
+    {
+      "id": "security-001",
+      "agent": "security",
+      "description": "Security audit for secrets, injection, CSP",
+      "status": "blocked",
+      "branch": "factory/feat-table-tennis-3d/security",
+      "inputs": ["integrator-001"],
+      "outputs": ["security-audit.md"],
+      "depends_on": ["integrator-001"]
+    },
+    {
+      "id": "qa-001",
+      "agent": "qa",
+      "description": "QA edge cases and integration tests",
+      "status": "blocked",
+      "branch": "factory/feat-table-tennis-3d/qa",
+      "inputs": ["security-001"],
+      "outputs": ["qa-report.md"],
+      "depends_on": ["security-001"]
+    },
+    {
+      "id": "reviewer-001",
+      "agent": "reviewer",
+      "description": "Final code review and convention check",
+      "status": "blocked",
+      "branch": "factory/feat-table-tennis-3d/review",
+      "inputs": ["qa-001"],
+      "outputs": ["review-report.md"],
+      "depends_on": ["qa-001"]
+    },
+    {
+      "id": "e2e-001",
+      "agent": "e2e-tester",
+      "description": "Visual E2E verification on deployed site",
+      "status": "blocked",
+      "branch": "factory/feat-table-tennis-3d/e2e",
+      "inputs": ["reviewer-001"],
+      "outputs": ["e2e-report.md"],
+      "depends_on": ["reviewer-001"]
+    }
+  ]
+}

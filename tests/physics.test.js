@@ -46,10 +46,10 @@ describe('Ball Physics', () => {
   it('should apply spin (Magnus effect)', () => {
     ball.position.set(0, 0.5, 0);
     ball.velocity.set(5, 0, 0);
-    ball.spin.set(0, 0, 10); // topspin
-    const vxBefore = ball.velocity.x;
+    ball.spin.set(0, 10, 0); // sidespin — curves in z
+    const vzBefore = ball.velocity.z;
     physics.applyMagnusEffect(ball, 0.016);
-    expect(ball.velocity.z).not.toBe(0);
+    expect(ball.velocity.z).not.toBe(vzBefore);
   });
 
   it('should collide with net when height < net height', () => {

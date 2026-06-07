@@ -111,9 +111,9 @@ describe('Scoring Logic', () => {
     sm.scorePoint('player');
     expect(sm.server).toBe('player');
     sm.scorePoint('ai');
-    expect(sm.server).toBe('player'); // still player, 2 serves
+    expect(sm.server).toBe('ai'); // switch after 2 serves
     sm.scorePoint('player');
-    expect(sm.server).toBe('ai'); // now ai serves
+    expect(sm.server).toBe('ai'); // ai serves 2nd point
   });
 
   it('should alternate serve every point at deuce', () => {

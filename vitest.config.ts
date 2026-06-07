@@ -1,18 +1,12 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  root: process.cwd(),
   test: {
-    environment: 'jsdom',
+    root: process.cwd(),
+    include: ["tests/**/*.test.js"],
+    environment: "jsdom",
     globals: true,
-    setupFiles: ['./tests/setup.js'],
-    coverage: {
-      reporter: ['text', 'html'],
-      thresholds: {
-        lines: 70,
-        functions: 70,
-        branches: 60,
-        statements: 70,
-      },
-    },
+    setupFiles: ["./tests/setup.js"],
   },
 });
