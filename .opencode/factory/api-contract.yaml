@@ -1,0 +1,616 @@
+version: "1.0.0"
+service: rally-pro-3d
+base_url: /api/v1
+
+schemas:
+  Player:
+    id:
+      type: string
+      format: uuid
+      description: Unique player identifier
+    username:
+      type: string
+      minLength: 3
+      maxLength: 24
+      pattern: "^[a-zA-Z0-9_-]+$"
+      description: Public display name
+    email:
+      type: string
+      format: email
+      nullable: true
+      description: Optional email for registered accounts
+    is_guest:
+      type: boolean
+      default: false
+      description: True if player is not authenticated
+    avatar_url:
+      type: string
+      format: uri
+      nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+  AuthToken:
+    access_token:
+      type: string
+      description: JWT access token, expires in 24h
+    token_type:
+      type: string
+      enum: [Bearer]
+    expires_in:
+      type: integer
+      default: 86400
+    player:
+      $ref: "#/schemas/Player"
+
+  LeaderboardEntry:
+    id:
+      type: string
+      format: uuid
+    player_id:
+      type: string
+      format: uuid
+      nullable: true
+      description: null for guest entries
+    player_name:
+      type: string
+      minLength: 1
+      maxLength: 24
+    score:
+      type: integer
+      minimum: 0
+      description: Calculated score based on difficulty, rallies, and win margin
+    difficulty:
+      type: string
+      enum: [novice, intermediate, expert, pro]
+    match_duration_seconds:
+      type: integer
+      minimum: 1
+    sets_won:
+      type: integer
+      minimum: 0
+    sets_lost:
+      type: integer
+      minimum: 0
+    total_rallies:
+      type: integer
+      minimum: 0
+    longest_rally:
+      type: integer
+      minimum: 0
+    achieved_at:
+      type: string
+      format: date-time
+
+  MatchRecord:
+    id:
+      type: string
+      format: uuid
+    player_id:
+      type: string
+      format: uuid
+    opponent_type:
+      type: string
+      enum: [ai, local]
+      default: ai
+    difficulty:
+      type: string
+      enum: [novice, intermediate, expert, pro]
+      nullable: true
+    player_score:
+      type: integer
+      minimum: 0
+    opponent_score:
+      type: integer
+      minimum: 0
+    player_sets_won:
+      type: integer
+      minimum: 0
+    opponent_sets_won:
+      type: integer
+      minimum: 0
+    duration_seconds:
+      type: integer
+      minimum: 1
+    total_rallies:
+      type: integer
+      minimum: 0
+    longest_rally:
+      type: integer
+      minimum: 0
+    player_serves_won:
+      type: integer
+      minimum: 0
+    player_serves_lost:
+      type: integer
+      minimum: 0
+    ended_at:
+      type: string
+      format: date-time
+    created_at:
+      type: string
+      format: date-time
+
+  PlayerStats:
+    id:
+      type: string
+      format: uuid
+    player_id:
+      type: string
+      format: uuid
+    total_matches:
+      type: integer
+      default: 0
+    total_wins:
+      type: integer
+      default: 0
+    total_losses:
+      type: integer
+      default: 0
+    total_sets_played:
+      type: integer
+      default: 0
+    total_sets_won:
+      type: integer
+      default: 0
+    total_points_scored:
+      type: integer
+      default: 0
+    total_points_against:
+      type: integer
+      default: 0
+    longest_rally_ever:
+      type: integer
+      default: 0
+    average_rally_length:
+      type: number
+      format: float
+      default: 0.0
+    highest_score_submitted:
+      type: integer
+      default: 0
+    current_streak:
+      type: integer
+      default: 0
+      description: Positive for win streak, negative for loss streak
+    best_win_streak:
+      type: integer
+      default: 0
+    fastest_match_seconds:
+      type: integer
+      nullable: true
+    updated_at:
+      type: string
+      format: date-time
+
+  ErrorResponse:
+    error:
+      type: string
+      description: Machine-readable error code
+    message:
+      type: string
+      description: Human-readable error description
+    details:
+      type: object
+      nullable: true
+      description: Additional validation errors or context
+
+endpoints:
+  # ─────────────────────────────────────────────────────────────
+  # Authentication
+  # ─────────────────────────────────────────────────────────────
+  - path: /auth/register
+    method: POST
+    summary: Register a new player account
+    request:
+      body:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 24
+          required: true
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          required: true
+        email:
+          type: string
+          format: email
+          required: false
+    response:
+      201:
+        body:
+          $ref: "#/schemas/AuthToken"
+      400:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+      409:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+        description: Username already taken
+    security: []
+
+  - path: /auth/login
+    method: POST
+    summary: Authenticate existing player
+    request:
+      body:
+        username:
+          type: string
+          required: true
+        password:
+          type: string
+          required: true
+    response:
+      200:
+        body:
+          $ref: "#/schemas/AuthToken"
+      401:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+    security: []
+
+  - path: /auth/guest
+    method: POST
+    summary: Create a guest session (no password required)
+    request:
+      body:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 24
+          required: true
+    response:
+      201:
+        body:
+          $ref: "#/schemas/AuthToken"
+      400:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+    security: []
+
+  - path: /auth/refresh
+    method: POST
+    summary: Refresh an expiring access token
+    request:
+      body:
+        refresh_token:
+          type: string
+          required: true
+    response:
+      200:
+        body:
+          $ref: "#/schemas/AuthToken"
+      401:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+    security: []
+
+  # ─────────────────────────────────────────────────────────────
+  # Leaderboard
+  # ─────────────────────────────────────────────────────────────
+  - path: /leaderboard
+    method: GET
+    summary: Retrieve paginated leaderboard entries
+    parameters:
+      query:
+        difficulty:
+          type: string
+          enum: [novice, intermediate, expert, pro]
+          required: false
+          description: Filter by difficulty level
+        period:
+          type: string
+          enum: [all_time, weekly, daily]
+          default: all_time
+          required: false
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+          required: false
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+          required: false
+    response:
+      200:
+        body:
+          entries:
+            type: array
+            items:
+              $ref: "#/schemas/LeaderboardEntry"
+          total:
+            type: integer
+            minimum: 0
+          limit:
+            type: integer
+          offset:
+            type: integer
+      400:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+    security: []
+
+  - path: /leaderboard
+    method: POST
+    summary: Submit a new leaderboard score
+    description: |
+      Rate-limited to 10 submissions per minute per IP.
+      Guest submissions accepted but not eligible for permanent rankings.
+    request:
+      headers:
+        X-Player-Token:
+          type: string
+          required: false
+          description: Guest or authenticated player token
+      body:
+        player_name:
+          type: string
+          minLength: 1
+          maxLength: 24
+          required: true
+        score:
+          type: integer
+          minimum: 0
+          required: true
+        difficulty:
+          type: string
+          enum: [novice, intermediate, expert, pro]
+          required: true
+        match_duration_seconds:
+          type: integer
+          minimum: 1
+          required: true
+        sets_won:
+          type: integer
+          minimum: 0
+          required: true
+        sets_lost:
+          type: integer
+          minimum: 0
+          required: true
+        total_rallies:
+          type: integer
+          minimum: 0
+          required: true
+        longest_rally:
+          type: integer
+          minimum: 0
+          required: true
+        match_checksum:
+          type: string
+          required: true
+          description: Client-generated HMAC-SHA256 of match data to prevent tampering
+    response:
+      201:
+        body:
+          rank:
+            type: integer
+            description: Global rank of this submission
+          entry:
+            $ref: "#/schemas/LeaderboardEntry"
+      400:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+      429:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+        description: Rate limit exceeded
+      422:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+        description: Checksum validation failed
+    security: []
+    rate_limit: "10/minute per IP"
+
+  # ─────────────────────────────────────────────────────────────
+  # Player Stats
+  # ─────────────────────────────────────────────────────────────
+  - path: /players/{player_id}/stats
+    method: GET
+    summary: Retrieve cumulative stats for a player
+    parameters:
+      path:
+        player_id:
+          type: string
+          format: uuid
+          required: true
+    response:
+      200:
+        body:
+          $ref: "#/schemas/PlayerStats"
+      404:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+    security: []
+
+  - path: /players/{player_id}/stats
+    method: PUT
+    summary: Update player stats after a match (server-aggregated)
+    description: |
+      This endpoint is intended for the backend match-processing worker.
+      Clients should NOT call this directly; use POST /matches instead.
+    parameters:
+      path:
+        player_id:
+          type: string
+          format: uuid
+          required: true
+    request:
+      body:
+        matches_played_delta:
+          type: integer
+          default: 1
+        matches_won_delta:
+          type: integer
+          default: 0
+        matches_lost_delta:
+          type: integer
+          default: 0
+        points_scored_delta:
+          type: integer
+          default: 0
+        points_against_delta:
+          type: integer
+          default: 0
+        longest_rally:
+          type: integer
+          minimum: 0
+        match_duration_seconds:
+          type: integer
+          minimum: 1
+    response:
+      200:
+        body:
+          $ref: "#/schemas/PlayerStats"
+      400:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+      404:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+    security:
+      - bearerAuth: []
+
+  # ─────────────────────────────────────────────────────────────
+  # Match History
+  # ─────────────────────────────────────────────────────────────
+  - path: /players/{player_id}/matches
+    method: GET
+    summary: Retrieve match history for a player
+    parameters:
+      path:
+        player_id:
+          type: string
+          format: uuid
+          required: true
+      query:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+        difficulty:
+          type: string
+          enum: [novice, intermediate, expert, pro]
+          required: false
+    response:
+      200:
+        body:
+          matches:
+            type: array
+            items:
+              $ref: "#/schemas/MatchRecord"
+          total:
+            type: integer
+      400:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+      404:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+    security: []
+
+  - path: /matches
+    method: POST
+    summary: Record a completed match
+    description: |
+      Creates a match record and triggers asynchronous stats aggregation.
+      Returns the created match ID.
+    request:
+      headers:
+        X-Player-Token:
+          type: string
+          required: false
+      body:
+        player_id:
+          type: string
+          format: uuid
+          required: true
+        opponent_type:
+          type: string
+          enum: [ai, local]
+          default: ai
+        difficulty:
+          type: string
+          enum: [novice, intermediate, expert, pro]
+          nullable: true
+        player_score:
+          type: integer
+          minimum: 0
+          required: true
+        opponent_score:
+          type: integer
+          minimum: 0
+          required: true
+        player_sets_won:
+          type: integer
+          minimum: 0
+          required: true
+        opponent_sets_won:
+          type: integer
+          minimum: 0
+          required: true
+        duration_seconds:
+          type: integer
+          minimum: 1
+          required: true
+        total_rallies:
+          type: integer
+          minimum: 0
+          required: true
+        longest_rally:
+          type: integer
+          minimum: 0
+          required: true
+        player_serves_won:
+          type: integer
+          minimum: 0
+          default: 0
+        player_serves_lost:
+          type: integer
+          minimum: 0
+          default: 0
+    response:
+      201:
+        body:
+          match_id:
+            type: string
+            format: uuid
+          player_stats:
+            $ref: "#/schemas/PlayerStats"
+      400:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+      429:
+        body:
+          $ref: "#/schemas/ErrorResponse"
+    security: []
+
+securitySchemes:
+  bearerAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
+
+error_codes:
+  INVALID_REQUEST: "Request body or parameters failed validation"
+  UNAUTHORIZED: "Authentication required but missing or invalid"
+  FORBIDDEN: "Authenticated user lacks permission for this resource"
+  NOT_FOUND: "Requested resource does not exist"
+  CONFLICT: "Resource already exists (e.g., duplicate username)"
+  RATE_LIMITED: "Too many requests; retry after specified time"
+  CHECKSUM_INVALID: "Match data tampering detected"
+  INTERNAL_ERROR: "Unexpected server error"

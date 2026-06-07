@@ -1,0 +1,199 @@
+{
+  "run_id": "rebuild-v2-20250607",
+  "branch_prefix": "factory/rebuild-v2",
+  "status": "in_progress",
+  "stage": "specification",
+  "tasks": [
+    {
+      "id": "arch-001",
+      "agent": "architect",
+      "description": "Design complete game architecture: contracts, DB schema, component registry, physics API",
+      "status": "in_progress",
+      "branch": "factory/rebuild-v2/architect",
+      "inputs": [
+        "design-system/rally-pro-3d/MASTER.md",
+        "requirements: complete rebuild from scratch"
+      ],
+      "outputs": [
+        ".opencode/factory/api-contract.yaml",
+        ".opencode/factory/db-schema.yaml",
+        ".opencode/factory/ui-component-registry.json",
+        ".opencode/factory/physics-contract.yaml",
+        ".opencode/factory/game-spec.md"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "test-001",
+      "agent": "test-engineer",
+      "description": "Write comprehensive test suites for physics engine, game state, rendering pipeline, input handling, AI",
+      "status": "blocked",
+      "branch": "factory/rebuild-v2/tests",
+      "inputs": [
+        ".opencode/factory/physics-contract.yaml",
+        ".opencode/factory/game-spec.md"
+      ],
+      "outputs": [
+        "tests/physics.test.js",
+        "tests/game-state.test.js",
+        "tests/renderer.test.js",
+        "tests/input.test.js",
+        "tests/ai.test.js",
+        "tests/integration.test.js"
+      ],
+      "depends_on": ["arch-001"]
+    },
+    {
+      "id": "ui-001",
+      "agent": "ui-designer",
+      "description": "Design game UI interfaces: title screen, HUD, menus, overlays with neon retro aesthetic",
+      "status": "blocked",
+      "branch": "factory/rebuild-v2/ui-designer",
+      "inputs": [
+        ".opencode/factory/ui-component-registry.json",
+        "design-system/rally-pro-3d/MASTER.md"
+      ],
+      "outputs": [
+        "src/ui/design/TitleScreen.md",
+        "src/ui/design/HUD.md",
+        "src/ui/design/Menus.md",
+        "src/ui/design/Leaderboard.md",
+        "src/ui/design/Settings.md"
+      ],
+      "depends_on": ["arch-001"]
+    },
+    {
+      "id": "db-001",
+      "agent": "database",
+      "description": "Implement leaderboard schema and models",
+      "status": "blocked",
+      "branch": "factory/rebuild-v2/database",
+      "inputs": [
+        ".opencode/factory/db-schema.yaml"
+      ],
+      "outputs": [
+        "src/db/schema.sql",
+        "src/db/models.js"
+      ],
+      "depends_on": ["arch-001"]
+    },
+    {
+      "id": "backend-001",
+      "agent": "backend",
+      "description": "Implement game API: leaderboard, match history, player stats",
+      "status": "blocked",
+      "branch": "factory/rebuild-v2/backend",
+      "inputs": [
+        ".opencode/factory/api-contract.yaml",
+        "tests/*.test.js"
+      ],
+      "outputs": [
+        "src/api/leaderboard.js",
+        "src/api/matches.js",
+        "src/api/stats.js"
+      ],
+      "depends_on": ["arch-001", "test-001"]
+    },
+    {
+      "id": "frontend-001",
+      "agent": "frontend",
+      "description": "Implement complete game frontend: Three.js renderer, UI components, game loop, input handling",
+      "status": "blocked",
+      "branch": "factory/rebuild-v2/frontend",
+      "inputs": [
+        ".opencode/factory/ui-component-registry.json",
+        ".opencode/factory/game-spec.md",
+        ".opencode/factory/physics-contract.yaml",
+        "src/ui/design/*.md"
+      ],
+      "outputs": [
+        "src/js/renderer/SceneManager.js",
+        "src/js/renderer/GameRenderer.js",
+        "src/js/renderer/CameraManager.js",
+        "src/js/core/Game.js",
+        "src/js/core/GameStateMachine.js",
+        "src/js/physics/PhysicsEngine.js",
+        "src/js/input/InputManager.js",
+        "src/js/ui/*.js",
+        "src/js/ai/AIController.js",
+        "src/css/theme.css",
+        "index.html"
+      ],
+      "depends_on": ["arch-001", "ui-001"]
+    },
+    {
+      "id": "integrator-001",
+      "agent": "integrator",
+      "description": "Merge all branches, validate contracts, wire components",
+      "status": "blocked",
+      "branch": "factory/rebuild-v2/integrator",
+      "inputs": [
+        "factory/rebuild-v2/backend",
+        "factory/rebuild-v2/frontend",
+        "factory/rebuild-v2/database",
+        ".opencode/factory/api-contract.yaml"
+      ],
+      "outputs": [
+        "integration-report.md"
+      ],
+      "depends_on": ["backend-001", "frontend-001", "db-001"]
+    },
+    {
+      "id": "security-001",
+      "agent": "security",
+      "description": "Security audit for secrets, injection, auth flaws",
+      "status": "blocked",
+      "branch": "factory/rebuild-v2/security",
+      "inputs": [
+        "factory/rebuild-v2/integrator"
+      ],
+      "outputs": [
+        "security-report.md"
+      ],
+      "depends_on": ["integrator-001"]
+    },
+    {
+      "id": "qa-001",
+      "agent": "qa",
+      "description": "Run edge-case and integration tests",
+      "status": "blocked",
+      "branch": "factory/rebuild-v2/qa",
+      "inputs": [
+        "factory/rebuild-v2/security"
+      ],
+      "outputs": [
+        "qa-report.md"
+      ],
+      "depends_on": ["security-001"]
+    },
+    {
+      "id": "reviewer-001",
+      "agent": "reviewer",
+      "description": "Final convention and coverage review",
+      "status": "blocked",
+      "branch": "factory/rebuild-v2/reviewer",
+      "inputs": [
+        "factory/rebuild-v2/qa"
+      ],
+      "outputs": [
+        "review-report.md"
+      ],
+      "depends_on": ["qa-001"]
+    },
+    {
+      "id": "e2e-001",
+      "agent": "e2e-tester",
+      "description": "Visual verification on deployed site",
+      "status": "blocked",
+      "branch": "factory/rebuild-v2/e2e",
+      "inputs": [
+        "https://neon-pong-factory.vercel.app"
+      ],
+      "outputs": [
+        "e2e-report.md",
+        "screenshots/"
+      ],
+      "depends_on": ["reviewer-001"]
+    }
+  ]
+}

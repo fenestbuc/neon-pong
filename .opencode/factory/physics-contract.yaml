@@ -1,0 +1,493 @@
+version: "1.0.0"
+engine: rally-pro-3d-physics
+
+# ─────────────────────────────────────────────────────────────
+# Coordinate System & Units
+# ─────────────────────────────────────────────────────────────
+coordinate_system:
+  description: Right-handed, Y-up, meters
+  axes:
+    x: "Table width axis, 0 at center, positive to server's right"
+    y: "Vertical axis, 0 at table surface, positive upward"
+    z: "Table length axis, 0 at net, positive toward player 1 (near side)"
+  units:
+    distance: meters
+    time: seconds
+    mass: kilograms
+    velocity: meters/second
+    angular_velocity: radians/second
+    force: newtons
+
+# ─────────────────────────────────────────────────────────────
+# Physics Constants & Table Dimensions
+# ─────────────────────────────────────────────────────────────
+constants:
+  table:
+    width: 1.525
+    length: 2.74
+    height: 0.76
+    net_height: 0.1525
+    net_overhang: 0.1525
+    line_width: 0.02
+    bounce_restitution: 0.75
+      description: "Energy retained after table bounce (0-1)"
+      range: [0.0, 1.0]
+    surface_friction: 0.4
+      description: "Friction coefficient for table surface"
+      range: [0.0, 1.0]
+
+  ball:
+    mass: 0.0027
+    radius: 0.020
+    drag_coefficient: 0.47
+    air_density: 1.225
+    magnus_coefficient: 0.00012
+      description: "Scaling factor for Magnus (spin) force"
+    max_speed: 28.0
+      description: "Hard cap on linear velocity magnitude"
+
+  paddle:
+    default_radius: 0.08
+      description: "Effective hit radius of paddle face"
+    restitution: 0.92
+      description: "Energy retained after paddle hit"
+      range: [0.0, 1.0]
+    friction: 0.6
+      description: "Tangential friction for spin transfer"
+      range: [0.0, 1.0]
+    sweet_spot_multiplier: 1.15
+      description: "Velocity multiplier for center strikes"
+
+  net:
+    restitution: 0.05
+    friction: 0.9
+
+  environment:
+    gravity: -9.81
+    terminal_velocity_fallback: 15.0
+      description: "Safety cap if drag calculation fails"
+
+# ─────────────────────────────────────────────────────────────
+# Data Shapes (Type Definitions)
+# ─────────────────────────────────────────────────────────────
+types:
+  Vector3:
+    x: { type: float }
+    y: { type: float }
+    z: { type: float }
+
+  Quaternion:
+    x: { type: float }
+    y: { type: float }
+    z: { type: float }
+    w: { type: float }
+
+  BallState:
+    position: { type: Vector3 }
+    velocity: { type: Vector3 }
+    spin: { type: Vector3 }
+      description: "Angular velocity vector; axis of rotation with magnitude = rad/s"
+    angular_velocity: { type: Vector3 }
+      description: "Alias for spin; implementers choose canonical field"
+    radius: { type: float, default: 0.02 }
+    is_in_play: { type: boolean, default: false }
+      description: "True when ball is subject to rally physics"
+    last_bounced_side: { type: string, enum: [none, player_1, player_2], default: none }
+    bounce_count_player_1: { type: integer, default: 0 }
+    bounce_count_player_2: { type: integer, default: 0 }
+
+  PaddleState:
+    player_id: { type: string, enum: [player_1, player_2] }
+    position: { type: Vector3 }
+    velocity: { type: Vector3 }
+      description: "Linear velocity of paddle center for impulse calculation"
+    orientation: { type: Quaternion }
+    radius: { type: float, default: 0.08 }
+    sweet_spot: { type: Vector3 }
+      description: "Offset from position to geometric center of paddle face"
+    is_active: { type: boolean, default: true }
+      description: "False during serve toss before paddle strike"
+
+  CollisionEvent:
+    type:
+      type: string
+      enum: [PADDLE_HIT, TABLE_BOUNCE, NET_HIT, NET_TOP_HIT, WALL_HIT, FLOOR_HIT]
+    player_id:
+      type: string
+      enum: [player_1, player_2]
+      nullable: true
+      description: "Present for PADDLE_HIT, TABLE_BOUNCE; null otherwise"
+    contact_point: { type: Vector3 }
+    normal: { type: Vector3 }
+      description: "Surface normal at contact point"
+    penetration: { type: float }
+      description: "Depth of overlap; used for position correction"
+    relative_velocity: { type: Vector3 }
+      description: "Pre-collision relative velocity at contact"
+    impulse: { type: Vector3 }
+      description: "Resolved impulse vector applied to ball"
+    timestamp: { type: float }
+      description: "Simulation time at which collision occurred"
+
+  ScoringEvent:
+    type:
+      type: string
+      enum: [POINT_PLAYER_1, POINT_PLAYER_2, FAULT, LET]
+    reason:
+      type: string
+      enum: [
+        DOUBLE_BOUNCE,
+        OUT_OF_BOUNDS,
+        NET_FAILURE,
+        MISS,
+        SERVE_FAULT,
+        SERVE_LET
+      ]
+    rally_length: { type: integer, minimum: 0 }
+    ball_position_at_end: { type: Vector3 }
+
+  PhysicsState:
+    time: { type: float, description: "Accumulated simulation time" }
+    time_step: { type: float, description: "Last delta time used" }
+    ball: { type: BallState }
+    paddles:
+      type: array
+      items: { type: PaddleState }
+    collisions_this_frame:
+      type: array
+      items: { type: CollisionEvent }
+    scoring_events_this_frame:
+      type: array
+      items: { type: ScoringEvent }
+
+  PhysicsConfig:
+    gravity: { type: float, default: -9.81 }
+    time_scale: { type: float, default: 1.0, range: [0.0, 2.0] }
+      description: "Slow-motion or speed-up factor"
+    sub_steps: { type: integer, default: 4, range: [1, 8] }
+      description: "Internal sub-steps per frame for stability"
+    enable_magnus: { type: boolean, default: true }
+    enable_air_drag: { type: boolean, default: true }
+    enable_net_physics: { type: boolean, default: true }
+    ball_mass: { type: float, default: 0.0027 }
+    ball_radius: { type: float, default: 0.02 }
+    table_restitution: { type: float, default: 0.75, range: [0.0, 1.0] }
+    paddle_restitution: { type: float, default: 0.92, range: [0.0, 1.0] }
+    max_ball_speed: { type: float, default: 28.0 }
+
+# ─────────────────────────────────────────────────────────────
+# Physics Subsystem API
+# ─────────────────────────────────────────────────────────────
+subsystems:
+  ball_physics:
+    description: |
+      Integrates ball motion using semi-implicit Euler.
+      Applies gravity, air drag, and Magnus force each sub-step.
+      Clamps velocity magnitude to max_ball_speed.
+    api:
+      integrateBall:
+        description: "Advance ball state by deltaTime with forces"
+        params:
+          ball_state: BallState
+          delta_time: float
+          config: PhysicsConfig
+        returns: BallState
+        side_effects: none
+        constraints:
+          - "delta_time must be <= 0.05 (20 FPS minimum); caller must cap or subdivide"
+          - "Position must not be modified outside this subsystem except by collision response"
+
+      applyMagnusForce:
+        description: "Compute and return Magnus force vector for current ball state"
+        params:
+          ball_state: BallState
+          air_density: float
+          magnus_coefficient: float
+        returns: Vector3
+        formula: "F = magnus_coefficient * air_density * cross(velocity, spin)"
+
+      applyAirDrag:
+        description: "Compute and return drag force vector opposing velocity"
+        params:
+          ball_state: BallState
+          drag_coefficient: float
+          air_density: float
+          cross_sectional_area: float
+        returns: Vector3
+        formula: "F = -0.5 * drag_coefficient * air_density * area * |v|^2 * normalize(v)"
+
+  collision_detection:
+    description: |
+      Detects collisions between ball and scene geometries.
+      Uses swept-sphere tests for fast-moving ball vs. static geometry.
+      Paddle collision uses continuous collision detection (CCD) against moving paddle.
+    api:
+      detectBallTableCollision:
+        params:
+          prev_ball_state: BallState
+          next_ball_state: BallState
+          table_bounds: object
+            # { minX, maxX, minZ, maxZ, height, netHeight, netOverhang }
+        returns:
+          type: CollisionEvent | null
+          collision_types: [TABLE_BOUNCE]
+        notes:
+          - "Must validate ball is above table surface (y >= table_height - epsilon)"
+          - "Must enforce net overhang collision (ball cannot pass through net post zone)"
+
+      detectBallNetCollision:
+        params:
+          prev_ball_state: BallState
+          next_ball_state: BallState
+          net_geometry: object
+            # { position, width, height, topBandHeight }
+        returns:
+          type: CollisionEvent | null
+          collision_types: [NET_HIT, NET_TOP_HIT]
+        notes:
+          - "NET_TOP_HIT triggers LET if during serve; otherwise play continues"
+          - "NET_HIT (side) during rally: play continues with reduced velocity"
+
+      detectBallPaddleCollision:
+        params:
+          prev_ball_state: BallState
+          next_ball_state: BallState
+          paddle_state: PaddleState
+          delta_time: float
+        returns:
+          type: CollisionEvent | null
+          collision_types: [PADDLE_HIT]
+        notes:
+          - "Use continuous collision detection: ray/sphere-swept vs. moving disc"
+          - "If multiple paddle hits in one frame, only first is valid (ghost hit protection)"
+          - "Must check ball is approaching paddle (dot(relative_velocity, normal) < 0)"
+
+      detectOutOfBounds:
+        params:
+          ball_state: BallState
+          court_bounds: object
+            # { minX, maxX, minZ, maxZ, maxY }
+        returns:
+          type: ScoringEvent | null
+        notes:
+          - "If ball y < floor_level and beyond table: POINT to opponent"
+          - "If ball |x| > max_court_width and beyond table: POINT to opponent"
+          - "If ball |z| > max_court_length and not yet bounced on receiver side: FAULT"
+
+  collision_response:
+    description: |
+      Resolves detected collisions into updated velocities.
+      Separates position by penetration depth along normal.
+      Transfers linear momentum and spin between paddle and ball.
+    api:
+      resolveBounce:
+        params:
+          ball_state: BallState
+          collision_event: CollisionEvent
+          restitution: float
+          friction: float
+        returns: BallState
+        side_effects: none
+        rules:
+          - "Reflect velocity about normal: v' = v - (1 + restitution) * dot(v, n) * n"
+          - "Apply tangential friction to spin: spin_change proportional to tangential impulse"
+          - "Paddle hit adds paddle velocity scaled by impact factor"
+
+      applySweetSpotBonus:
+        params:
+          ball_state: BallState
+          collision_event: CollisionEvent
+          paddle_state: PaddleState
+        returns: BallState
+        rules:
+          - "If contact is within 30% of sweet_spot radius, multiply outgoing velocity by sweet_spot_multiplier"
+
+      correctPenetration:
+        params:
+          ball_state: BallState
+          collision_event: CollisionEvent
+        returns: BallState
+        rules:
+          - "Move ball along normal by penetration + 1mm epsilon to prevent tunnelling"
+
+  scoring_rules:
+    description: |
+      Evaluates ball physics state against table-tennis rules.
+      Distinguishes between faults (serve violations) and rally points.
+      Maintains per-rally counters for bounces.
+    api:
+      evaluateServe:
+        params:
+          ball_state: BallState
+          server_id: string
+          serve_phase: string
+            enum: [TOSS, STRUCK, IN_FLIGHT]
+        returns: ScoringEvent | null
+        rules:
+          - "TOSS: ball must be struck before second bounce on server side"
+          - "STRUCK: ball must hit server side first, then pass over net"
+          - "IN_FLIGHT: net contact after serve strike = LET if ball lands in; FAULT if not"
+          - "Double bounce on server side before strike = FAULT"
+
+      evaluateRally:
+        params:
+          ball_state: BallState
+          last_hit_by: string
+          bounce_history: array
+            items: { player_id: string, position: Vector3 }
+        returns: ScoringEvent | null
+        rules:
+          - "Ball must bounce exactly once on opponent side before being returned"
+          - "Double bounce on same side = POINT to opponent"
+          - "Ball out of bounds after bouncing on table = POINT to opponent"
+          - "Ball out of bounds without bouncing on receiver side = POINT to server (if serve already valid)"
+
+      resetBounceCounters:
+        params:
+          ball_state: BallState
+        returns: BallState
+        side_effects: "Sets bounce_count_player_1, bounce_count_player_2 to 0"
+
+# ─────────────────────────────────────────────────────────────
+# State Transitions
+# ─────────────────────────────────────────────────────────────
+state_machine:
+  description: |
+    The physics engine exposes a state machine for the ball's lifecycle.
+    Transitions are triggered by game-level events, not directly by physics.
+    Physics behavior per state is defined below.
+
+  states:
+    PHYSICS_INACTIVE:
+      description: "Ball is not simulated (menu, loading)"
+      ball_physics: "Frozen at fixed position; no integration"
+      collision_detection: "Disabled"
+
+    PHYSICS_SERVING:
+      description: "Ball held by server; pre-toss"
+      ball_physics: "Frozen at paddle face; follows paddle movement"
+      collision_detection: "Disabled against paddle; enabled vs. environment"
+      transition_to: PHYSICS_TOSS
+      transition_trigger: "Game controller calls startToss()"
+
+    PHYSICS_TOSS:
+      description: "Ball tossed upward by server; must be struck"
+      ball_physics: "Standard integration with gravity and drag; spin disabled"
+      collision_detection: "Enabled for paddle (server only), table, net"
+      constraints:
+        - "Ball y must remain > table_height - 0.1m (no rolling on table)"
+        - "If ball touches floor or double-bounces: FAULT"
+      transition_to: PHYSICS_RALLY
+      transition_trigger: "PADDLE_HIT detected on server paddle"
+
+    PHYSICS_RALLY:
+      description: "Ball in active play after valid serve strike"
+      ball_physics: "Full integration: gravity, drag, Magnus, net physics"
+      collision_detection: "Enabled for both paddles, table, net, bounds"
+      transition_to: PHYSICS_POINT_END
+      transition_trigger: "ScoringEvent returned by evaluateRally or evaluateServe"
+
+    PHYSICS_POINT_END:
+      description: "Ball out of play; point awarded"
+      ball_physics: "Continue integration until ball rests or exits court; then freeze"
+      collision_detection: "Enabled for visual realism; scoring disabled"
+      transition_to: PHYSICS_SERVING
+      transition_trigger: "Game controller calls nextServeState(server_id)"
+
+    PHYSICS_REPLAY:
+      description: "Replay mode; physics run at reduced time_scale"
+      ball_physics: "Same as source state but time_scale < 1.0 (typically 0.3)"
+      collision_detection: "Enabled; scoring disabled"
+      constraints:
+        - "Replay must use deterministic fixed timestep from recorded input"
+
+# ─────────────────────────────────────────────────────────────
+# Engine Lifecycle API
+# ─────────────────────────────────────────────────────────────
+lifecycle:
+  init:
+    description: "Initialize physics world with configuration"
+    params:
+      config: PhysicsConfig
+    side_effects:
+      - "Allocates internal state buffers"
+      - "Resets simulation time to 0.0"
+    idempotency: "Calling init() twice replaces all state"
+
+  step:
+    description: "Advance simulation by one frame"
+    params:
+      delta_time: float
+        description: "Frame delta in seconds; will be clamped and subdivided"
+      paddle_inputs:
+        type: array
+        items:
+          player_id: string
+          position: Vector3
+          velocity: Vector3
+          orientation: Quaternion
+    returns: PhysicsState
+    sequence:
+      - "1. Clamp delta_time to max 0.05s and split into sub_steps"
+      - "2. Update PaddleState from inputs"
+      - "3. For each sub-step:"
+      - "   a. Integrate ball (gravity, drag, Magnus) -> next_ball"
+      - "   b. Detect collisions (paddle, table, net, bounds)"
+      - "   c. If collision: resolve response, correct penetration, update spin"
+      - "   d. Evaluate serve/rally rules -> scoring event"
+      - "   e. Append collision/scoring events to frame lists"
+      - "4. Return consolidated PhysicsState"
+    constraints:
+      - "delta_time > 0; negative values are rejected"
+      - "Paddle velocity magnitude capped at internal constant (10 m/s) to prevent exploit"
+
+  resetRally:
+    description: "Clear rally-specific counters without destroying world state"
+    side_effects:
+      - "Resets bounce counters, last_bounced_side, scoring event buffer"
+
+  setServeState:
+    description: "Place ball in serving position"
+    params:
+      server_id: string
+      ball_position: Vector3
+      initial_velocity: Vector3
+    side_effects:
+      - "Sets ball position and velocity directly"
+      - "Sets ball state to PHYSICS_SERVING or PHYSICS_TOSS depending on velocity"
+
+  setReplayState:
+    description: "Load a deterministic replay snapshot"
+    params:
+      snapshot: PhysicsState
+      time_scale: float
+    side_effects:
+      - "Replaces all internal state with snapshot"
+      - "Sets time_scale for slow-motion"
+
+  getState:
+    description: "Return current PhysicsState copy"
+    returns: PhysicsState
+    idempotency: "Pure read; safe to call any time"
+
+  subscribeCollision:
+    description: "Register callback for collision events"
+    params:
+      callback: "(event: CollisionEvent) => void"
+    returns: unsubscribe_function
+
+# ─────────────────────────────────────────────────────────────
+# Determinism & Testing Contract
+# ─────────────────────────────────────────────────────────────
+determinism:
+  description: |
+    Physics simulation MUST be deterministic given identical:
+      - PhysicsConfig
+      - Starting PhysicsState
+      - Sequence of paddle_inputs per frame
+      - Fixed delta_time (use 1/60 for tests)
+  testing_requirements:
+    - "Floating point results must match within epsilon 1e-5 across runs"
+    - "Replay from recorded input must reconstruct ball path exactly"
+    - "Collision order must be deterministic (sort by time then type)"
+    - "Randomness is forbidden inside physics step; any stochastic behavior (e.g., AI input) belongs in Game layer"

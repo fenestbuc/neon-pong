@@ -1,0 +1,679 @@
+{
+  "version": "1.0.0",
+  "description": "Rally Pro 3D UI Component Registry. All components are DOM-based overlays rendered above the Three.js canvas. No React/Vue framework is assumed; implementers may use vanilla JS or web components.",
+  "design_system": "rally-pro-3d",
+  "global_props": {
+    "visible": {
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "description": "Whether the overlay is rendered in the DOM"
+    },
+    "z_index": {
+      "type": "integer",
+      "required": false,
+      "default": 10,
+      "description": "CSS z-index for overlay layering"
+    },
+    "on_transition_end": {
+      "type": "() => void",
+      "required": false,
+      "description": "Callback fired after CSS enter/exit transition completes"
+    }
+  },
+  "components": {
+    "TitleScreen": {
+      "description": "Main menu overlay with neon title, subtitle, and navigation buttons. Activates on app start or return to menu.",
+      "props": {
+        "title": {
+          "type": "string",
+          "required": false,
+          "default": "NEON PONG"
+        },
+        "subtitle": {
+          "type": "string",
+          "required": false,
+          "default": "Arcade Classic Reimagined"
+        },
+        "animate_entry": {
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "description": "Trigger glitch-in and scanline reveal on mount"
+        },
+        "background_video_url": {
+          "type": "string",
+          "required": false,
+          "default": null,
+          "description": "Optional looped background video element URL"
+        },
+        "on_start_game": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_show_leaderboard": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_show_settings": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_show_tutorial": {
+          "type": "() => void",
+          "required": false
+        }
+      },
+      "states": [
+        " idle",
+        " entering",
+        " exiting",
+        " hidden"
+      ],
+      "variants": [
+        " default",
+        " minimal"
+      ],
+      "slots": [
+        " title",
+        " subtitle",
+        " action_buttons",
+        " background"
+      ]
+    },
+    "DifficultySelect": {
+      "description": "Overlay for choosing AI difficulty before match start. Not listed in user requirements but implied by game flow DIFFICULTY_SELECT state.",
+      "props": {
+        "selected": {
+          "type": "string",
+          "enum": ["novice", "intermediate", "expert", "pro"],
+          "required": false,
+          "default": "intermediate"
+        },
+        "on_select": {
+          "type": "(difficulty: string) => void",
+          "required": true
+        },
+        "on_back": {
+          "type": "() => void",
+          "required": true
+        }
+      },
+      "states": [
+        " idle",
+        " entering",
+        " exiting",
+        " hidden"
+      ],
+      "variants": [
+        " default"
+      ],
+      "slots": [
+        " difficulty_cards",
+        " preview_text"
+      ]
+    },
+    "HUD": {
+      "description": "In-game heads-up display showing score, timer, set count, and difficulty badge. Always visible during PLAYING and SERVING states.",
+      "props": {
+        "player_score": {
+          "type": "integer",
+          "required": true
+        },
+        "opponent_score": {
+          "type": "integer",
+          "required": true
+        },
+        "player_sets": {
+          "type": "integer",
+          "required": true
+        },
+        "opponent_sets": {
+          "type": "integer",
+          "required": true
+        },
+        "timer_seconds": {
+          "type": "integer",
+          "required": false,
+          "default": 0,
+          "description": "Match elapsed time"
+        },
+        "difficulty_label": {
+          "type": "string",
+          "enum": ["NOVICE", "INTERMEDIATE", "EXPERT", "PRO"],
+          "required": true
+        },
+        "rally_count": {
+          "type": "integer",
+          "required": false,
+          "default": 0,
+          "description": "Current rally count in match"
+        },
+        "serving_player": {
+          "type": "string",
+          "enum": ["player_1", "player_2"],
+          "required": true
+        },
+        "compact": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "Use smaller fonts for mobile screens"
+        },
+        "on_pause_request": {
+          "type": "() => void",
+          "required": true
+        }
+      },
+      "states": [
+        " active",
+        " hidden"
+      ],
+      "variants": [
+        " desktop",
+        " mobile"
+      ],
+      "slots": [
+        " score_area",
+        " timer_area",
+        " set_indicator",
+        " difficulty_badge",
+        " pause_button"
+      ]
+    },
+    "PauseMenu": {
+      "description": "Modal overlay shown when player pauses the game. Blurs background and stops game loop.",
+      "props": {
+        "is_open": {
+          "type": "boolean",
+          "required": true
+        },
+        "on_resume": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_restart": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_quit_to_menu": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_show_settings": {
+          "type": "() => void",
+          "required": false
+        }
+      },
+      "states": [
+        " closed",
+        " opening",
+        " open",
+        " closing"
+      ],
+      "variants": [
+        " default"
+      ],
+      "slots": [
+        " menu_buttons",
+        " background_blur"
+      ]
+    },
+    "GameOverScreen": {
+      "description": "End-of-match overlay displaying result, final score, stats summary, and navigation options.",
+      "props": {
+        "result": {
+          "type": "string",
+          "enum": ["WIN", "LOSS", "DRAW"],
+          "required": true
+        },
+        "player_score": {
+          "type": "integer",
+          "required": true
+        },
+        "opponent_score": {
+          "type": "integer",
+          "required": true
+        },
+        "player_sets": {
+          "type": "integer",
+          "required": true
+        },
+        "opponent_sets": {
+          "type": "integer",
+          "required": true
+        },
+        "match_duration_seconds": {
+          "type": "integer",
+          "required": true
+        },
+        "longest_rally": {
+          "type": "integer",
+          "required": true
+        },
+        "total_rallies": {
+          "type": "integer",
+          "required": true
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["novice", "intermediate", "expert", "pro"],
+          "required": true
+        },
+        "rank_achieved": {
+          "type": "integer",
+          "required": false,
+          "default": null,
+          "description": "Global leaderboard rank if submitted"
+        },
+        "on_play_again": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_main_menu": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_submit_score": {
+          "type": "() => void",
+          "required": false
+        }
+      },
+      "states": [
+        " entering",
+        " visible",
+        " exiting",
+        " hidden"
+      ],
+      "variants": [
+        " default",
+        " new_record"
+      ],
+      "slots": [
+        " result_banner",
+        " score_board",
+        " stats_grid",
+        " action_buttons"
+      ]
+    },
+    "LeaderboardScreen": {
+      "description": "Full-screen overlay showing global or filtered leaderboard table.",
+      "props": {
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#schemas/LeaderboardEntry" },
+          "required": true
+        },
+        "period": {
+          "type": "string",
+          "enum": ["all_time", "weekly", "daily"],
+          "required": false,
+          "default": "all_time"
+        },
+        "difficulty_filter": {
+          "type": "string",
+          "enum": ["all", "novice", "intermediate", "expert", "pro"],
+          "required": false,
+          "default": "all"
+        },
+        "highlight_player_id": {
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        "is_loading": {
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        "error_message": {
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        "on_period_change": {
+          "type": "(period: string) => void",
+          "required": true
+        },
+        "on_difficulty_change": {
+          "type": "(difficulty: string) => void",
+          "required": true
+        },
+        "on_back": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_refresh": {
+          "type": "() => void",
+          "required": false
+        }
+      },
+      "states": [
+        " loading",
+        " loaded",
+        " error",
+        " empty"
+      ],
+      "variants": [
+        " default"
+      ],
+      "slots": [
+        " header",
+        " filter_bar",
+        " table_body",
+        " pagination",
+        " back_button"
+      ]
+    },
+    "SettingsPanel": {
+      "description": "Configuration overlay for game options: player name, difficulty, sound, controls, graphics.",
+      "props": {
+        "is_open": {
+          "type": "boolean",
+          "required": true
+        },
+        "player_name": {
+          "type": "string",
+          "required": false,
+          "default": "Player 1"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["novice", "intermediate", "expert", "pro"],
+          "required": false,
+          "default": "intermediate"
+        },
+        "sound_enabled": {
+          "type": "boolean",
+          "required": false,
+          "default": true
+        },
+        "music_enabled": {
+          "type": "boolean",
+          "required": false,
+          "default": true
+        },
+        "particle_quality": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "required": false,
+          "default": "medium"
+        },
+        "camera_shake": {
+          "type": "boolean",
+          "required": false,
+          "default": true
+        },
+        "input_device": {
+          "type": "string",
+          "enum": ["keyboard", "mouse", "touch", "auto"],
+          "required": false,
+          "default": "auto"
+        },
+        "on_save": {
+          "type": "(settings: object) => void",
+          "required": true
+        },
+        "on_cancel": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_reset_defaults": {
+          "type": "() => void",
+          "required": false
+        }
+      },
+      "states": [
+        " closed",
+        " opening",
+        " open",
+        " saving",
+        " closing"
+      ],
+      "variants": [
+        " default",
+        " compact"
+      ],
+      "slots": [
+        " tabs",
+        " game_settings",
+        " audio_settings",
+        " graphics_settings",
+        " input_settings",
+        " action_buttons"
+      ]
+    },
+    "CountdownOverlay": {
+      "description": "Full-screen animated countdown displayed before match start (3, 2, 1, GO!).",
+      "props": {
+        "count": {
+          "type": "integer",
+          "required": false,
+          "default": 3,
+          "description": "Starting number for countdown"
+        },
+        "interval_ms": {
+          "type": "integer",
+          "required": false,
+          "default": 1000
+        },
+        "go_text": {
+          "type": "string",
+          "required": false,
+          "default": "GO!"
+        },
+        "auto_dismiss": {
+          "type": "boolean",
+          "required": false,
+          "default": true
+        },
+        "on_complete": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_tick": {
+          "type": "(remaining: integer) => void",
+          "required": false
+        }
+      },
+      "states": [
+        " counting",
+        " go",
+        " dismissed"
+      ],
+      "variants": [
+        " default",
+        " neon_pulse",
+        " glitch"
+      ],
+      "slots": [
+        " number_display",
+        " go_display"
+      ]
+    },
+    "LoadingScreen": {
+      "description": "Shown during asset loading and initialization. Displays progress bar and tips.",
+      "props": {
+        "progress": {
+          "type": "number",
+          "range": [0.0, 1.0],
+          "required": true
+        },
+        "stage_label": {
+          "type": "string",
+          "required": false,
+          "default": "Loading..."
+        },
+        "tip_text": {
+          "type": "string",
+          "required": false,
+          "default": null
+        },
+        "show_progress_bar": {
+          "type": "boolean",
+          "required": false,
+          "default": true
+        }
+      },
+      "states": [
+        " loading",
+        " fading_out",
+        " hidden"
+      ],
+      "variants": [
+        " default",
+        " minimal"
+      ],
+      "slots": [
+        " progress_bar",
+        " stage_text",
+        " tip_text"
+      ]
+    },
+    "TutorialOverlay": {
+      "description": "Interactive onboarding overlay teaching controls, rules, and UI elements.",
+      "props": {
+        "current_step": {
+          "type": "integer",
+          "required": false,
+          "default": 0
+        },
+        "total_steps": {
+          "type": "integer",
+          "required": false,
+          "default": 5
+        },
+        "content": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "body": { "type": "string" },
+            "image_url": { "type": "string", "nullable": true },
+            "highlight_selector": { "type": "string", "nullable": true }
+          },
+          "required": true
+        },
+        "on_next": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_prev": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_skip": {
+          "type": "() => void",
+          "required": true
+        },
+        "on_complete": {
+          "type": "() => void",
+          "required": true
+        }
+      },
+      "states": [
+        " entering",
+        " visible",
+        " transitioning",
+        " exiting",
+        " hidden"
+      ],
+      "variants": [
+        " default",
+        " first_time_only"
+      ],
+      "slots": [
+        " step_content",
+        " navigation_dots",
+        " action_buttons",
+        " highlight_box"
+      ]
+    },
+    "NotificationToast": {
+      "description": "Transient popup for achievements, errors, or status messages. Auto-dismissing.",
+      "props": {
+        "message": {
+          "type": "string",
+          "required": true
+        },
+        "type": {
+          "type": "string",
+          "enum": ["info", "success", "warning", "error", "achievement"],
+          "required": false,
+          "default": "info"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "required": false,
+          "default": 3000
+        },
+        "dismissible": {
+          "type": "boolean",
+          "required": false,
+          "default": true
+        },
+        "on_dismiss": {
+          "type": "() => void",
+          "required": false
+        }
+      },
+      "states": [
+        " entering",
+        " visible",
+        " exiting",
+        " dismissed"
+      ],
+      "variants": [
+        " default",
+        " compact"
+      ],
+      "slots": [
+        " icon",
+        " message_text",
+        " dismiss_button"
+      ]
+    },
+    "ScoreCelebration": {
+      "description": "Visual effect overlay triggered when a point is scored. Shows point value and player name with animated text.",
+      "props": {
+        "player_name": {
+          "type": "string",
+          "required": true
+        },
+        "points": {
+          "type": "integer",
+          "required": false,
+          "default": 1
+        },
+        "screen_position": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" }
+          },
+          "required": false,
+          "default": { "x": 0.5, "y": 0.3 }
+        },
+        "celebration_type": {
+          "type": "string",
+          "enum": ["normal", "set_point", "match_point", "deuce"],
+          "required": false,
+          "default": "normal"
+        },
+        "on_complete": {
+          "type": "() => void",
+          "required": true
+        }
+      },
+      "states": [
+        " animating",
+        " complete"
+      ],
+      "variants": [
+        " default"
+      ],
+      "slots": [
+        " text_display"
+      ]
+    }
+  }
+}

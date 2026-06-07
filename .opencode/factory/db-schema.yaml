@@ -1,0 +1,393 @@
+version: "1.0.0"
+database: rally_pro_3d
+dialect: postgresql
+
+# ─────────────────────────────────────────────────────────────
+# Tables
+# ─────────────────────────────────────────────────────────────
+tables:
+  players:
+    description: Registered and guest player accounts
+    columns:
+      id:
+        type: uuid
+        primary: true
+        default: gen_random_uuid()
+      username:
+        type: varchar(24)
+        nullable: false
+      email:
+        type: varchar(255)
+        nullable: true
+        unique: true
+      password_hash:
+        type: varchar(255)
+        nullable: true
+        description: Nullable for guest accounts
+      is_guest:
+        type: boolean
+        nullable: false
+        default: true
+      guest_token:
+        type: varchar(64)
+        nullable: true
+        unique: true
+        description: Ephemeral token for guest sessions
+      avatar_url:
+        type: text
+        nullable: true
+      last_active_at:
+        type: timestamptz
+        nullable: true
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: now()
+      updated_at:
+        type: timestamptz
+        nullable: false
+        default: now()
+    indexes:
+      - name: idx_players_username
+        columns: [username]
+        unique: true
+      - name: idx_players_guest_token
+        columns: [guest_token]
+        unique: true
+        where: "guest_token IS NOT NULL"
+      - name: idx_players_last_active
+        columns: [last_active_at]
+    constraints:
+      - type: check
+        name: chk_players_username_format
+        expression: "username ~ '^[a-zA-Z0-9_-]+$'"
+      - type: check
+        name: chk_players_auth_or_guest
+        expression: "(is_guest = true AND password_hash IS NULL) OR (is_guest = false AND password_hash IS NOT NULL)"
+
+  leaderboard_entries:
+    description: High-score submissions for each difficulty tier
+    columns:
+      id:
+        type: uuid
+        primary: true
+        default: gen_random_uuid()
+      player_id:
+        type: uuid
+        nullable: true
+        references:
+          table: players
+          column: id
+          on_delete: SET NULL
+          on_update: CASCADE
+      player_name:
+        type: varchar(24)
+        nullable: false
+        description: Denormalized for historical integrity
+      score:
+        type: integer
+        nullable: false
+        default: 0
+      difficulty:
+        type: varchar(16)
+        nullable: false
+        description: "novice | intermediate | expert | pro"
+      match_duration_seconds:
+        type: integer
+        nullable: false
+        default: 0
+      sets_won:
+        type: integer
+        nullable: false
+        default: 0
+      sets_lost:
+        type: integer
+        nullable: false
+        default: 0
+      total_rallies:
+        type: integer
+        nullable: false
+        default: 0
+      longest_rally:
+        type: integer
+        nullable: false
+        default: 0
+      match_checksum:
+        type: varchar(64)
+        nullable: false
+        description: HMAC-SHA256 hex string for anti-cheat validation
+      achieved_at:
+        type: timestamptz
+        nullable: false
+        default: now()
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: now()
+    indexes:
+      - name: idx_leaderboard_difficulty_score
+        columns: [difficulty, score DESC]
+      - name: idx_leaderboard_player
+        columns: [player_id]
+      - name: idx_leaderboard_achieved
+        columns: [achieved_at DESC]
+      - name: idx_leaderboard_period
+        columns: [difficulty, achieved_at DESC, score DESC]
+    constraints:
+      - type: check
+        name: chk_leaderboard_difficulty
+        expression: "difficulty IN ('novice', 'intermediate', 'expert', 'pro')"
+      - type: check
+        name: chk_leaderboard_positive_score
+        expression: "score >= 0"
+
+  match_history:
+    description: Immutable record of every completed match
+    columns:
+      id:
+        type: uuid
+        primary: true
+        default: gen_random_uuid()
+      player_id:
+        type: uuid
+        nullable: false
+        references:
+          table: players
+          column: id
+          on_delete: CASCADE
+          on_update: CASCADE
+      opponent_type:
+        type: varchar(16)
+        nullable: false
+        default: 'ai'
+        description: "ai | local"
+      difficulty:
+        type: varchar(16)
+        nullable: true
+        description: Null for local multiplayer
+      player_score:
+        type: integer
+        nullable: false
+        default: 0
+      opponent_score:
+        type: integer
+        nullable: false
+        default: 0
+      player_sets_won:
+        type: integer
+        nullable: false
+        default: 0
+      opponent_sets_won:
+        type: integer
+        nullable: false
+        default: 0
+      duration_seconds:
+        type: integer
+        nullable: false
+        default: 0
+      total_rallies:
+        type: integer
+        nullable: false
+        default: 0
+      longest_rally:
+        type: integer
+        nullable: false
+        default: 0
+      player_serves_won:
+        type: integer
+        nullable: false
+        default: 0
+      player_serves_lost:
+        type: integer
+        nullable: false
+        default: 0
+      replay_data_url:
+        type: text
+        nullable: true
+        description: Optional S3/GCS URL to compressed replay JSON
+      ended_at:
+        type: timestamptz
+        nullable: false
+        default: now()
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: now()
+    indexes:
+      - name: idx_match_history_player
+        columns: [player_id, ended_at DESC]
+      - name: idx_match_history_difficulty
+        columns: [player_id, difficulty, ended_at DESC]
+        where: "difficulty IS NOT NULL"
+      - name: idx_match_history_ended
+        columns: [ended_at DESC]
+    constraints:
+      - type: check
+        name: chk_match_opponent_type
+        expression: "opponent_type IN ('ai', 'local')"
+      - type: check
+        name: chk_match_difficulty
+        expression: "difficulty IS NULL OR difficulty IN ('novice', 'intermediate', 'expert', 'pro')"
+      - type: check
+        name: chk_match_positive_duration
+        expression: "duration_seconds > 0"
+
+  player_stats:
+    description: Aggregated statistics per player (updated asynchronously via trigger/worker)
+    columns:
+      id:
+        type: uuid
+        primary: true
+        default: gen_random_uuid()
+      player_id:
+        type: uuid
+        nullable: false
+        unique: true
+        references:
+          table: players
+          column: id
+          on_delete: CASCADE
+          on_update: CASCADE
+      total_matches:
+        type: integer
+        nullable: false
+        default: 0
+      total_wins:
+        type: integer
+        nullable: false
+        default: 0
+      total_losses:
+        type: integer
+        nullable: false
+        default: 0
+      total_sets_played:
+        type: integer
+        nullable: false
+        default: 0
+      total_sets_won:
+        type: integer
+        nullable: false
+        default: 0
+      total_points_scored:
+        type: integer
+        nullable: false
+        default: 0
+      total_points_against:
+        type: integer
+        nullable: false
+        default: 0
+      longest_rally_ever:
+        type: integer
+        nullable: false
+        default: 0
+      average_rally_length:
+        type: numeric(6,2)
+        nullable: false
+        default: 0.00
+      highest_score_submitted:
+        type: integer
+        nullable: false
+        default: 0
+      current_streak:
+        type: integer
+        nullable: false
+        default: 0
+        description: Positive = win streak, negative = loss streak
+      best_win_streak:
+        type: integer
+        nullable: false
+        default: 0
+      fastest_match_seconds:
+        type: integer
+        nullable: true
+      updated_at:
+        type: timestamptz
+        nullable: false
+        default: now()
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: now()
+    indexes:
+      - name: idx_player_stats_streak
+        columns: [current_streak DESC]
+      - name: idx_player_stats_wins
+        columns: [total_wins DESC]
+    constraints:
+      - type: check
+        name: chk_stats_nonnegative_counts
+        expression: "total_matches >= 0 AND total_wins >= 0 AND total_losses >= 0"
+
+  achievements:
+    description: Unlockable achievements for player progression
+    columns:
+      id:
+        type: uuid
+        primary: true
+        default: gen_random_uuid()
+      player_id:
+        type: uuid
+        nullable: false
+        references:
+          table: players
+          column: id
+          on_delete: CASCADE
+          on_update: CASCADE
+      achievement_key:
+        type: varchar(64)
+        nullable: false
+        description: "e.g., first_win, rally_master_50, speed_demon"
+      unlocked_at:
+        type: timestamptz
+        nullable: false
+        default: now()
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: now()
+    indexes:
+      - name: idx_achievements_player_key
+        columns: [player_id, achievement_key]
+        unique: true
+
+# ─────────────────────────────────────────────────────────────
+# Migration Plan
+# ─────────────────────────────────────────────────────────────
+migrations:
+  - id: 001_init
+    description: |
+      Bootstrap schema creation. No existing data to migrate.
+      Tables created in dependency order:
+        1. players (no FKs)
+        2. leaderboard_entries (FK → players)
+        3. match_history (FK → players)
+        4. player_stats (FK → players)
+        5. achievements (FK → players)
+    rollback: |
+      DROP TABLE IF EXISTS achievements, player_stats, match_history, leaderboard_entries, players;
+
+  - id: 002_add_match_checksum
+    description: |
+      Add match_checksum to leaderboard_entries for anti-cheat.
+      Backfill existing rows with NULL and enforce NOT NULL
+      via CHECK constraint after backfill.
+    depends_on: [001_init]
+
+  - id: 003_add_replay_data
+    description: |
+      Add replay_data_url to match_history. Nullable by default.
+      Existing rows remain NULL. No backfill required.
+    depends_on: [001_init]
+    rollback: |
+      ALTER TABLE match_history DROP COLUMN IF EXISTS replay_data_url;
+
+# ─────────────────────────────────────────────────────────────
+# Seeding
+# ─────────────────────────────────────────────────────────────
+seed_data:
+  description: |
+    Development seed script inserts 5 default AI opponent personas
+    into players with is_guest = true and usernames like ai_novice_1,
+    ai_intermediate_1, etc., so that local multiplayer entries
+    and leaderboard tests have reference data.
+    No seed data required for production.
