@@ -113,6 +113,20 @@ class Game {
     document.getElementById('btn-settings-back').addEventListener('click', () => {
       this.stateMachine.transition(STATES.TITLE_SCREEN);
     });
+
+    // Debug helper for E2E and troubleshooting
+    window.__gameDebug = {
+      version: '2.0.0',
+      game: this,
+      state: () => this.stateMachine?.state,
+      scores: () => this.stateMachine?.context?.scores,
+      webgl: () => this.sceneManager?.webglAvailable,
+    };
+
+    // Warn if WebGL is unavailable (headless/testing environments)
+    if (!this.sceneManager.webglAvailable) {
+      console.warn('[Game] WebGL unavailable — 3D rendering disabled. UI still functional.');
+    }
   }
 
   onStateChange(state, oldState, ctx) {

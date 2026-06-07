@@ -10,11 +10,19 @@ export class SceneManager {
     this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
     this.camera.position.set(0, 2.5, 3.5);
     this.camera.lookAt(0, 0.8, 0);
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.webglAvailable = true;
+    
+    try {
+      this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      this.renderer.shadowMap.enabled = true;
+      this.webglAvailable = true;
+    } catch (e) {
+      console.warn('[SceneManager] WebGL unavailable — 3D rendering disabled:', e.message);
+      this.renderer = null;
+      this.webglAvailable = false;
+    }
+    
     this._setupLights();
     this._createEnvironment();
     window.addEventListener('resize', () => this._onResize());
@@ -44,10 +52,14 @@ export class SceneManager {
   _onResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    if (this.renderer) {
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
   }
 
   render() {
-    this.renderer.render(this.scene, this.camera);
+    if (this.renderer) {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 }
