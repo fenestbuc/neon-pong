@@ -41,6 +41,7 @@ class Game {
 
     this.bindEvents();
     this.stateMachine.onTransition((s, old, ctx) => this.onStateChange(s, old, ctx));
+    this.stateMachine.transition(STATES.LOADING);
     this.stateMachine.transition(STATES.TITLE_SCREEN);
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
