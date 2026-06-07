@@ -51,7 +51,8 @@ export class InputManager {
   getPaddleZ() {
     // Map mouse/touch Y to table Z range [-0.7, 0.7]
     const rect = this.canvasRect || { top: 0, height: window.innerHeight };
-    const normalized = (this.mouseY - rect.top) / rect.height;
+    const y = this.mouseY || (rect.top + rect.height / 2);
+    const normalized = (y - rect.top) / rect.height;
     // clamp
     return Math.max(-0.7, Math.min(0.7, (normalized * 1.4) - 0.7));
   }
@@ -74,6 +75,8 @@ export class InputManager {
       const t = e.touches[0];
       this.touchY = t.clientY;
       this.touchX = t.clientX;
+      this.lastTouchY = t.clientY;
+      this.lastTouchX = t.clientX;
       this.mouseY = t.clientY; // mirror for paddle control
     }
   }

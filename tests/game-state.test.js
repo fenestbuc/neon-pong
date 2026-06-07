@@ -45,12 +45,12 @@ describe('Game State Machine', () => {
     expect(sm.state).toBe('POINT_END');
   });
 
-  it('should transition back to SERVING after point end', () => {
+  it('should transition back to PLAYING after point end', () => {
     sm.transition('START');
     sm.transition('COUNTDOWN_COMPLETE');
     sm.transition('POINT_SCORED');
     sm.transition('NEXT_POINT');
-    expect(sm.state).toBe('SERVING');
+    expect(sm.state).toBe('PLAYING');
   });
 
   it('should transition to MATCH_END when match is won', () => {

@@ -12,7 +12,7 @@ import { ParticleSystem } from '../effects/ParticleSystem.js';
 import { Ball } from '../entities/Ball.js';
 import { Paddle } from '../entities/Paddle.js';
 import { Table } from '../entities/Table.js';
-import { PHYSICS_STEP, DIFFICULTY } from './Constants.js';
+import { PHYSICS_STEP, DIFFICULTY, TABLE_LENGTH, TABLE_HEIGHT, MAX_BALL_SPEED } from './Constants.js';
 
 export class Game {
   constructor(canvas) {
@@ -25,7 +25,10 @@ export class Game {
     this.ball = new Ball();
     this.playerPaddle = new Paddle();
     this.aiPaddle = new Paddle();
-    this.aiPaddle.position.x = 1.2;
+    this.playerPaddle.position.x = -(TABLE_LENGTH / 2 + 0.15);
+    this.aiPaddle.position.x = TABLE_LENGTH / 2 + 0.15;
+    this.playerPaddle.position.y = TABLE_HEIGHT + 0.12;
+    this.aiPaddle.position.y = TABLE_HEIGHT + 0.12;
 
     this.sceneManager = new SceneManager(canvas);
     this.gameRenderer = new GameRenderer(this.sceneManager);
@@ -56,9 +59,11 @@ export class Game {
 
   applySettings() {
     const diff = this.settings.difficulty || 'medium';
+    const format = this.settings.format || 'best-of-3';
     this.ai = new AIController({ difficulty: diff });
+    this.stateMachine.config.matchLength = format;
     this.hud.setDifficulty(diff);
-    this.hud.setFormat(this.settings.format || 'best-of-3');
+    this.hud.setFormat(format);
   }
 
   start() {
@@ -104,10 +109,16 @@ export class Game {
     const speedX = isPlayerServe ? 6 : -6;
     this.ball.velocity.set(speedX, -2, (Math.random() - 0.5) * 2);
     this.ball.bounceCount = 0;
+
+    // If we were in SERVING state (e.g. from POINT_END transition), move to PLAYING
+    if (this.stateMachine.state === 'SERVING') {
+      this.stateMachine.transition('SERVE_COMPLETE');
+    }
   }
 
   restart() {
     this.stateMachine.resetGame();
+    this.stateMachine.state = 'MENU';
     this.startMatch(this.settings.difficulty || 'medium');
   }
 
@@ -158,6 +169,19 @@ export class Game {
   updatePhysics(dt) {
     this.physics.update(this.ball, dt);
 
+    // Clamp ball speed
+    const speed = Math.sqrt(
+      this.ball.velocity.x ** 2 +
+      this.ball.velocity.y ** 2 +
+      this.ball.velocity.z ** 2
+    );
+    if (speed > MAX_BALL_SPEED) {
+      const scale = MAX_BALL_SPEED / speed;
+      this.ball.velocity.x *= scale;
+      this.ball.velocity.y *= scale;
+      this.ball.velocity.z *= scale;
+    }
+
     // AI movement
     const aiMove = this.ai.getMove(this.ball, this.aiPaddle, dt);
     this.aiPaddle.position.z += aiMove;
@@ -166,19 +190,37 @@ export class Game {
     // Player movement from input
     const axis = this.input.getVerticalAxis();
     if (axis !== 0) {
-      // Keyboard control
       this.playerPaddle.position.z += axis * 2.5 * dt;
     } else {
-      // Mouse / touch control
       this.playerPaddle.position.z = this.input.getPaddleZ();
     }
     this.playerPaddle.position.z = Math.max(-0.7, Math.min(0.7, this.playerPaddle.position.z));
+
+    // Paddle collisions
+    if (this.checkPaddleHit(this.ball, this.playerPaddle)) {
+      this.handlePaddleHit(this.ball, this.playerPaddle);
+    }
+    if (this.checkPaddleHit(this.ball, this.aiPaddle)) {
+      this.handlePaddleHit(this.ball, this.aiPaddle);
+    }
 
     // Check double bounce
     if (this.physics.isDoubleBounce(this.ball)) {
       const scorer = this.ball.position.x > 0 ? 'player' : 'ai';
       this.stateMachine.scorePoint(scorer);
       this.onPointEnd();
+      return;
+    }
+
+    // Ball went far off table (side or past end)
+    if (
+      Math.abs(this.ball.position.z) > TABLE_WIDTH / 2 + 1.0 ||
+      Math.abs(this.ball.position.x) > TABLE_LENGTH / 2 + 2.0
+    ) {
+      const scorer = this.ball.position.x > 0 ? 'player' : 'ai';
+      this.stateMachine.scorePoint(scorer);
+      this.onPointEnd();
+      return;
     }
 
     // Out of bounds / floor (below table)
@@ -189,18 +231,69 @@ export class Game {
     }
   }
 
+  checkPaddleHit(ball, paddle) {
+    const dx = Math.abs(ball.position.x - paddle.position.x);
+    const dy = Math.abs(ball.position.y - paddle.position.y);
+    const dz = Math.abs(ball.position.z - paddle.position.z);
+
+    // Must be moving toward paddle
+    const movingToward =
+      (paddle.position.x < 0 && ball.velocity.x < 0) ||
+      (paddle.position.x > 0 && ball.velocity.x > 0);
+    if (!movingToward) return false;
+
+    return (
+      dx < ball.radius + 0.06 &&
+      dy < ball.radius + 0.25 &&
+      dz < ball.radius + 0.10
+    );
+  }
+
+  handlePaddleHit(ball, paddle) {
+    const hitZ = ball.position.z - paddle.position.z;
+
+    // Push ball slightly past paddle so it doesn't stick
+    if (paddle.position.x < 0) {
+      ball.position.x = paddle.position.x + ball.radius + 0.06;
+    } else {
+      ball.position.x = paddle.position.x - ball.radius - 0.06;
+    }
+
+    // Reverse toward opponent with speed increase
+    const currentVx = Math.abs(ball.velocity.x);
+    let newVx = Math.max(currentVx * 1.02, 5.0) + 1.0;
+    newVx = Math.min(newVx, MAX_BALL_SPEED);
+
+    if (paddle.position.x < 0) {
+      ball.velocity.x = newVx;
+    } else {
+      ball.velocity.x = -newVx;
+    }
+
+    // Ensure upward trajectory to clear net
+    ball.velocity.y = Math.max(ball.velocity.y * 0.3, 0) + 3.5;
+
+    // English: hitting edges adds z velocity
+    ball.velocity.z += hitZ * 4.0;
+    ball.velocity.z = Math.max(-6, Math.min(6, ball.velocity.z));
+
+    ball.bounceCount = 0;
+
+    // Effects
+    this.audio.playHit();
+    this.particles.spawnHitSparks(ball.position.x, ball.position.y, ball.position.z, 15);
+  }
+
   onPointEnd() {
     if (this.stateMachine.isGameOver()) {
       if (this.stateMachine.isMatchOver()) {
         this.stateMachine.transition('MATCH_WON');
         this.ui.show('game-over');
       } else {
-        // Game over but not match over — record set win, then serve again
-        this.stateMachine.sets.player += this.stateMachine.winner === 'player' ? 1 : 0;
-        this.stateMachine.sets.ai += this.stateMachine.winner === 'ai' ? 1 : 0;
+        // Game over but not match over — reset scores, keep sets, serve again
         this.stateMachine.scores = { player: 0, ai: 0 };
         this.stateMachine.winner = null;
-        this.stateMachine.state = 'SERVING'; // directly to serving, skip POINT_END
+        this.stateMachine.state = 'PLAYING';
         this.ui.show('hud');
         this.ball.reset();
         this.serveBall();
@@ -208,6 +301,7 @@ export class Game {
     } else {
       this.stateMachine.transition('POINT_SCORED');
       setTimeout(() => {
+        this.stateMachine.transition('NEXT_POINT');
         this.ball.reset();
         this.serveBall();
       }, 1500);

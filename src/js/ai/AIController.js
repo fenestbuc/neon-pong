@@ -15,6 +15,17 @@ export class AIController {
   }
 
   getMove(ball, paddle, dt) {
+    // Only react when ball is coming toward this paddle
+    const dx = paddle.position.x - ball.position.x;
+    if (dx * ball.velocity.x <= 0) {
+      return 0; // Ball moving away or already past
+    }
+
+    // Random whiff based on error rate
+    if (Math.random() < this.errorRate) {
+      return 0;
+    }
+
     const targetZ = this.predictBallZAtPaddle(ball, paddle.position.x);
     const diff = targetZ - paddle.position.z;
     const maxStep = this.speed * dt;
