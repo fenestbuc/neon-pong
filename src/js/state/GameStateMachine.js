@@ -76,7 +76,7 @@ export class GameStateMachine {
       this.winner = 'player';
       return true;
     }
-    if (ai >= minWin && ai - ai >= winBy) {
+    if (ai >= minWin && ai - player >= winBy) {
       this.sets.ai++;
       this.winner = 'ai';
       return true;

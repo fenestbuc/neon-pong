@@ -1,3 +1,5 @@
+import { TABLE_HEIGHT, BALL_RADIUS } from '../core/Constants.js';
+
 // Simple Vector3-like to avoid Three.js dependency in unit tests
 class Vec3 {
   constructor(x = 0, y = 0, z = 0) {
@@ -12,15 +14,15 @@ class Vec3 {
 
 export class Ball {
   constructor() {
-    this.position = new Vec3(0, 0.3, 0);
+    this.position = new Vec3(0, TABLE_HEIGHT + 0.5, 0);
     this.velocity = new Vec3(0, 0, 0);
     this.spin = new Vec3(0, 0, 0);
     this.bounceCount = 0;
-    this.radius = 0.02;
+    this.radius = BALL_RADIUS;
   }
 
   reset() {
-    this.position.set(0, 0.3, 0);
+    this.position.set(0, TABLE_HEIGHT + 0.5, 0);
     this.velocity.set(0, 0, 0);
     this.spin.set(0, 0, 0);
     this.bounceCount = 0;

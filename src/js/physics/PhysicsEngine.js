@@ -2,7 +2,7 @@ import {
   GRAVITY, AIR_DRAG, RESTITUTION_TABLE,
   FRICTION_TABLE, SPIN_DAMPING, SPIN_INFLUENCE,
   TABLE_LENGTH, TABLE_WIDTH, NET_HEIGHT,
-  BALL_RADIUS,
+  BALL_RADIUS, TABLE_HEIGHT,
 } from '../core/Constants.js';
 
 export class PhysicsEngine {
@@ -30,11 +30,12 @@ export class PhysicsEngine {
     ball.position.y += ball.velocity.y * dt;
     ball.position.z += ball.velocity.z * dt;
 
-    // Table bounce
-    if (ball.position.y <= ball.radius) {
+    // Table bounce (table surface is at TABLE_HEIGHT)
+    const tableSurface = TABLE_HEIGHT + ball.radius;
+    if (ball.position.y <= tableSurface) {
       const inBounds = this.isInBounds(ball);
       if (inBounds) {
-        ball.position.y = ball.radius;
+        ball.position.y = tableSurface;
         ball.velocity.y = -ball.velocity.y * RESTITUTION_TABLE;
 
         // Tangential friction / spin coupling at bounce
@@ -73,16 +74,16 @@ export class PhysicsEngine {
   checkNetCollision(ball) {
     const netXMin = -0.015;
     const netXMax = 0.015;
-    const netH = NET_HEIGHT;
+    const netTop = TABLE_HEIGHT + NET_HEIGHT;
 
     if (
       ball.position.x >= netXMin &&
       ball.position.x <= netXMax &&
-      ball.position.y < netH &&
+      ball.position.y < netTop &&
       Math.abs(ball.position.z) <= this.halfWidth
     ) {
-      // Any ball intersecting the net zone below net height collides
-      if (ball.position.y > netH * 0.7) {
+      // Any ball intersecting the net zone below net top collides
+      if (ball.position.y > netTop * 0.7) {
         // Potentially roll over
         ball.velocity.x *= 0.3;
         ball.velocity.y = Math.abs(ball.velocity.y) * 0.2;

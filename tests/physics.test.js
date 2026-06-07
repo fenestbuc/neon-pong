@@ -53,14 +53,14 @@ describe('Ball Physics', () => {
   });
 
   it('should collide with net when height < net height', () => {
-    ball.position.set(0, 0.1, 0); // at net, below net height
+    ball.position.set(0, 0.5, 0); // at net, below net top (0.91)
     ball.velocity.set(0, 0, 2);
     const collision = physics.checkNetCollision(ball);
     expect(collision).toBe(true);
   });
 
   it('should not collide with net when ball is above net', () => {
-    ball.position.set(0, 0.2, 0); // above net
+    ball.position.set(0, 1.0, 0); // above net height (0.76+0.15=0.91)
     ball.velocity.set(0, 0, 2);
     const collision = physics.checkNetCollision(ball);
     expect(collision).toBe(false);

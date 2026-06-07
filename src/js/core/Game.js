@@ -100,9 +100,9 @@ export class Game {
     // Serve from server's side with slight randomness
     const isPlayerServe = this.stateMachine.server === 'player';
     const sideX = isPlayerServe ? -1.2 : 1.2;
-    this.ball.position.set(sideX * 0.6, 0.3, (Math.random() - 0.5) * 0.4);
+    this.ball.position.set(sideX * 0.6, 1.2, (Math.random() - 0.5) * 0.4);
     const speedX = isPlayerServe ? 6 : -6;
-    this.ball.velocity.set(speedX, 0, (Math.random() - 0.5) * 2);
+    this.ball.velocity.set(speedX, -2, (Math.random() - 0.5) * 2);
     this.ball.bounceCount = 0;
   }
 
@@ -181,8 +181,8 @@ export class Game {
       this.onPointEnd();
     }
 
-    // Out of bounds / floor
-    if (this.ball.position.y < -0.5) {
+    // Out of bounds / floor (below table)
+    if (this.ball.position.y < 0.2) {
       const scorer = this.ball.position.x > 0 ? 'player' : 'ai';
       this.stateMachine.scorePoint(scorer);
       this.onPointEnd();
@@ -195,17 +195,21 @@ export class Game {
         this.stateMachine.transition('MATCH_WON');
         this.ui.show('game-over');
       } else {
+        // Game over but not match over — record set win, then serve again
         this.stateMachine.sets.player += this.stateMachine.winner === 'player' ? 1 : 0;
         this.stateMachine.sets.ai += this.stateMachine.winner === 'ai' ? 1 : 0;
         this.stateMachine.scores = { player: 0, ai: 0 };
         this.stateMachine.winner = null;
-        this.stateMachine.transition('NEXT_POINT');
+        this.stateMachine.state = 'SERVING'; // directly to serving, skip POINT_END
+        this.ui.show('hud');
+        this.ball.reset();
+        this.serveBall();
       }
     } else {
       this.stateMachine.transition('POINT_SCORED');
       setTimeout(() => {
-        this.stateMachine.transition('NEXT_POINT');
         this.ball.reset();
+        this.serveBall();
       }, 1500);
     }
   }

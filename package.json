@@ -6,7 +6,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "python3 -m http.server 8080",
-    "build": "esbuild src/js/game.js --bundle --outfile=dist/game.js --format=esm --minify"
+    "build": "echo 'No build needed — ES modules served natively'"
   },
   "devDependencies": {
     "vitest": "^1.6.0",
