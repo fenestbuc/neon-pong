@@ -49,11 +49,20 @@ export class InputManager {
   }
 
   getPaddleZ() {
-    // Map mouse/touch Y to table Z range [-0.7, 0.7]
-    const rect = this.canvasRect || { top: 0, height: window.innerHeight };
-    const y = this.mouseY || (rect.top + rect.height / 2);
-    const normalized = (y - rect.top) / rect.height;
-    // clamp
+    // Map mouse/touch X (left/right) to table Z range [-0.7, 0.7]
+    // From behind the table: mouse left → paddle left (negative Z)
+    //                       mouse right → paddle right (positive Z)
+    const rect = this.canvasRect || { left: 0, width: window.innerWidth };
+    const x = this.mouseX || (rect.left + rect.width / 2);
+    const normalized = (x - rect.left) / rect.width;
+    // Invert: left side of screen = left side of table (negative Z)
+    // But actually from behind: screen left = table left? No.
+    // From behind player looking toward opponent:
+    // screen left = table right (positive Z)? No.
+    // Let me think: if I'm behind the table facing forward,
+    // my left is the table's left side (negative Z if Z is across the table)
+    // Actually in Three.js: +Z is toward camera (bottom), -Z is away (top)
+    // So screen left = -Z, screen right = +Z
     return Math.max(-0.7, Math.min(0.7, (normalized * 1.4) - 0.7));
   }
 
@@ -66,7 +75,8 @@ export class InputManager {
       this.lastTouchX = t.clientX;
       this.touchY = t.clientY;
       this.touchX = t.clientX;
-      this.mouseY = t.clientY; // mirror for paddle control
+      this.mouseX = t.clientX; // mirror for paddle control (X-axis)
+      this.mouseY = t.clientY;
     }
   }
 
@@ -77,7 +87,8 @@ export class InputManager {
       this.touchX = t.clientX;
       this.lastTouchY = t.clientY;
       this.lastTouchX = t.clientX;
-      this.mouseY = t.clientY; // mirror for paddle control
+      this.mouseX = t.clientX; // mirror for paddle control (X-axis)
+      this.mouseY = t.clientY;
     }
   }
 

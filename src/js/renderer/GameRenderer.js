@@ -11,15 +11,16 @@ export class GameRenderer {
     this.createNet();
     this.createPaddles();
     this.createBall();
-    this.createEnvironment();
+    this.createTableLegs();
   }
 
   createTable() {
-    const geo = new THREE.BoxGeometry(TABLE_LENGTH, 0.05, TABLE_WIDTH);
+    // Table top - brighter green for visibility
+    const geo = new THREE.BoxGeometry(TABLE_LENGTH, 0.06, TABLE_WIDTH);
     const mat = new THREE.MeshStandardMaterial({
-      color: 0x1a5c1a,
-      roughness: 0.5,
-      metalness: 0.1,
+      color: 0x2d8a4e,
+      roughness: 0.4,
+      metalness: 0.05,
     });
     const table = new THREE.Mesh(geo, mat);
     table.position.y = TABLE_HEIGHT;
@@ -27,15 +28,15 @@ export class GameRenderer {
     this.scene.add(table);
     this.meshes.table = table;
 
-    // White lines
+    // White lines - thicker for visibility
     const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const ly = TABLE_HEIGHT + 0.026;
+    const ly = TABLE_HEIGHT + 0.031;
     [
-      [TABLE_LENGTH, 0.008, 0.03, 0, ly, TABLE_WIDTH / 2],
-      [TABLE_LENGTH, 0.008, 0.03, 0, ly, -TABLE_WIDTH / 2],
-      [0.03, 0.008, TABLE_WIDTH, TABLE_LENGTH / 2, ly, 0],
-      [0.03, 0.008, TABLE_WIDTH, -TABLE_LENGTH / 2, ly, 0],
-      [0.03, 0.008, TABLE_WIDTH, 0, ly, 0], // center line
+      [TABLE_LENGTH, 0.012, 0.04, 0, ly, TABLE_WIDTH / 2],
+      [TABLE_LENGTH, 0.012, 0.04, 0, ly, -TABLE_WIDTH / 2],
+      [0.04, 0.012, TABLE_WIDTH, TABLE_LENGTH / 2, ly, 0],
+      [0.04, 0.012, TABLE_WIDTH, -TABLE_LENGTH / 2, ly, 0],
+      [0.04, 0.012, TABLE_WIDTH, 0, ly, 0], // center line
     ].forEach(([w, h, d, x, y, z]) => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lineMat);
       m.position.set(x, y, z);
@@ -44,13 +45,24 @@ export class GameRenderer {
   }
 
   createNet() {
-    const geo = new THREE.BoxGeometry(0.02, NET_HEIGHT, TABLE_WIDTH + 0.05);
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0xdddddd,
-      transparent: true,
-      opacity: 0.85,
+    // Net posts
+    const postGeo = new THREE.CylinderGeometry(0.015, 0.015, NET_HEIGHT + 0.02, 8);
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
+    
+    [-TABLE_WIDTH/2 - 0.02, TABLE_WIDTH/2 + 0.02].forEach(z => {
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(0, TABLE_HEIGHT + NET_HEIGHT/2, z);
+      this.scene.add(post);
     });
-    const net = new THREE.Mesh(geo, mat);
+
+    // Net mesh (slightly wider than table)
+    const netGeo = new THREE.BoxGeometry(0.01, NET_HEIGHT, TABLE_WIDTH + 0.04);
+    const netMat = new THREE.MeshStandardMaterial({
+      color: 0xeeeeee,
+      transparent: true,
+      opacity: 0.6,
+    });
+    const net = new THREE.Mesh(netGeo, netMat);
     net.position.set(0, TABLE_HEIGHT + NET_HEIGHT / 2, 0);
     this.scene.add(net);
     this.meshes.net = net;
@@ -60,56 +72,56 @@ export class GameRenderer {
     const createPaddle = (color, x) => {
       const group = new THREE.Group();
 
-      // Paddle face (thicker, more visible)
-      const faceGeo = new THREE.BoxGeometry(0.05, 0.17, 0.17);
-      const faceMat = new THREE.MeshStandardMaterial({
+      // Main paddle blade - larger and more visible
+      const bladeGeo = new THREE.BoxGeometry(0.04, 0.20, 0.18);
+      const bladeMat = new THREE.MeshStandardMaterial({
         color,
         emissive: color,
-        emissiveIntensity: 0.4,
+        emissiveIntensity: 0.6,
         roughness: 0.3,
-        metalness: 0.2,
+        metalness: 0.3,
       });
-      const face = new THREE.Mesh(faceGeo, faceMat);
-      face.castShadow = true;
-      group.add(face);
+      const blade = new THREE.Mesh(bladeGeo, bladeMat);
+      blade.castShadow = true;
+      group.add(blade);
 
-      // Blue rubber face (visible front)
-      const rubberGeo = new THREE.BoxGeometry(0.003, 0.158, 0.158);
+      // Rubber face - brighter
+      const rubberGeo = new THREE.BoxGeometry(0.005, 0.19, 0.17);
       const rubberMat = new THREE.MeshStandardMaterial({
-        color: 0x0066cc,
-        emissive: 0x0066cc,
-        emissiveIntensity: 0.2,
-        roughness: 0.8,
+        color: 0x0088ff,
+        emissive: 0x0088ff,
+        emissiveIntensity: 0.3,
+        roughness: 0.7,
       });
       const rubber = new THREE.Mesh(rubberGeo, rubberMat);
-      rubber.position.x = x > 0 ? 0.026 : -0.026;
+      rubber.position.x = x > 0 ? 0.022 : -0.022;
       group.add(rubber);
 
       // Handle
-      const handleGeo = new THREE.CylinderGeometry(0.012, 0.015, 0.2, 8);
-      const handleMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6 });
+      const handleGeo = new THREE.CylinderGeometry(0.015, 0.018, 0.22, 8);
+      const handleMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5 });
       const handle = new THREE.Mesh(handleGeo, handleMat);
       handle.rotation.z = Math.PI / 2;
-      handle.position.y = -0.18;
+      handle.position.y = -0.20;
       group.add(handle);
 
-      group.position.set(x, TABLE_HEIGHT + 0.12, 0);
+      group.position.set(x, TABLE_HEIGHT + 0.14, 0);
       this.scene.add(group);
       return group;
     };
 
-    this.meshes.playerPaddle = createPaddle(0x00eeff, -TABLE_LENGTH / 2 - 0.15);
-    this.meshes.aiPaddle = createPaddle(0xff00aa, TABLE_LENGTH / 2 + 0.15);
+    this.meshes.playerPaddle = createPaddle(0x00ddff, -TABLE_LENGTH / 2 - 0.18);
+    this.meshes.aiPaddle = createPaddle(0xff0088, TABLE_LENGTH / 2 + 0.18);
   }
 
   createBall() {
-    // Main ball (much larger)
-    const geo = new THREE.SphereGeometry(0.04, 32, 32);
+    // Main ball - bright white with strong emissive
+    const geo = new THREE.SphereGeometry(0.035, 32, 32);
     const mat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      emissive: 0xffeeaa,
-      emissiveIntensity: 1.2,
-      roughness: 0.1,
+      emissive: 0xfff0cc,
+      emissiveIntensity: 2.0,
+      roughness: 0.05,
       metalness: 0.0,
     });
     const ball = new THREE.Mesh(geo, mat);
@@ -117,30 +129,30 @@ export class GameRenderer {
     this.scene.add(ball);
     this.meshes.ball = ball;
 
-    // Ball glowing aura
-    const auraGeo = new THREE.SphereGeometry(0.08, 16, 16);
+    // Ball glow aura
+    const auraGeo = new THREE.SphereGeometry(0.07, 16, 16);
     const auraMat = new THREE.MeshBasicMaterial({
-      color: 0xffeeaa,
+      color: 0xffee88,
       transparent: true,
-      opacity: 0.15,
+      opacity: 0.2,
       side: THREE.BackSide,
     });
     const aura = new THREE.Mesh(auraGeo, auraMat);
     this.scene.add(aura);
     this.meshes.ballAura = aura;
 
-    // Ball point light
-    const light = new THREE.PointLight(0xffeeaa, 1.0, 3.0);
+    // Strong point light attached to ball
+    const light = new THREE.PointLight(0xffee88, 2.0, 4.0);
     this.scene.add(light);
     this.meshes.ballLight = light;
 
-    // Trail line
+    // Trail
     const trailGeo = new THREE.BufferGeometry();
     const trailMat = new THREE.LineBasicMaterial({
-      color: 0xffeeaa,
+      color: 0xffdd66,
       transparent: true,
-      opacity: 0.4,
-      linewidth: 3,
+      opacity: 0.5,
+      linewidth: 4,
     });
     trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(60 * 3), 3));
     const trailLine = new THREE.Line(trailGeo, trailMat);
@@ -151,35 +163,16 @@ export class GameRenderer {
     this.trailIdx = 0;
   }
 
-  createEnvironment() {
-    // Floor beneath table
-    const floorGeo = new THREE.PlaneGeometry(20, 20);
-    const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x111118,
-      roughness: 0.8,
-      metalness: 0.3,
-    });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = 0;
-    floor.receiveShadow = true;
-    this.scene.add(floor);
-
-    // Subtle grid on floor
-    const gridHelper = new THREE.GridHelper(20, 40, 0x222233, 0x1a1a22);
-    gridHelper.position.y = 0.001;
-    this.scene.add(gridHelper);
-
-    // Table legs (for visual completeness)
-    const legMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.3, metalness: 0.8 });
+  createTableLegs() {
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.3, metalness: 0.7 });
     const legPositions = [
-      [-TABLE_LENGTH / 2 + 0.2, TABLE_HEIGHT / 2, -TABLE_WIDTH / 2 + 0.2],
-      [-TABLE_LENGTH / 2 + 0.2, TABLE_HEIGHT / 2, TABLE_WIDTH / 2 - 0.2],
-      [TABLE_LENGTH / 2 - 0.2, TABLE_HEIGHT / 2, -TABLE_WIDTH / 2 + 0.2],
-      [TABLE_LENGTH / 2 - 0.2, TABLE_HEIGHT / 2, TABLE_WIDTH / 2 - 0.2],
+      [-TABLE_LENGTH / 2 + 0.25, TABLE_HEIGHT / 2, -TABLE_WIDTH / 2 + 0.25],
+      [-TABLE_LENGTH / 2 + 0.25, TABLE_HEIGHT / 2, TABLE_WIDTH / 2 - 0.25],
+      [TABLE_LENGTH / 2 - 0.25, TABLE_HEIGHT / 2, -TABLE_WIDTH / 2 + 0.25],
+      [TABLE_LENGTH / 2 - 0.25, TABLE_HEIGHT / 2, TABLE_WIDTH / 2 - 0.25],
     ];
     legPositions.forEach(([x, y, z]) => {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, TABLE_HEIGHT, 8), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, TABLE_HEIGHT, 8), legMat);
       leg.position.set(x, y, z);
       this.scene.add(leg);
     });
@@ -211,13 +204,13 @@ export class GameRenderer {
     }
     this.meshes.trail.geometry.attributes.position.needsUpdate = true;
 
-    // Update paddles
+    // Update paddles with new Y offset
     this.meshes.playerPaddle.position.z = playerPaddle.position.z;
     this.meshes.aiPaddle.position.z = aiPaddle.position.z;
 
     // Subtle floating animation for paddles
-    this.meshes.playerPaddle.position.y = TABLE_HEIGHT + 0.12 + Math.sin(Date.now() * 0.002) * 0.005;
-    this.meshes.aiPaddle.position.y = TABLE_HEIGHT + 0.12 + Math.sin(Date.now() * 0.002 + 1) * 0.005;
+    this.meshes.playerPaddle.position.y = TABLE_HEIGHT + 0.14 + Math.sin(Date.now() * 0.002) * 0.005;
+    this.meshes.aiPaddle.position.y = TABLE_HEIGHT + 0.14 + Math.sin(Date.now() * 0.002 + 1) * 0.005;
   }
 
   render() {

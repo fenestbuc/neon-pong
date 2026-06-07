@@ -107,23 +107,38 @@ export class Game {
     this.cameraManager.setMode('player');
 
     // Countdown: 3 → 2 → 1 → Go!
-    const overlay = document.getElementById('countdown-number');
+    const display = document.getElementById('countdown-display');
+    if (!display) {
+      console.error('[Game] Countdown display element not found');
+      return;
+    }
     let count = 3;
-    overlay.textContent = count;
+    display.textContent = count;
+    display.className = 'countdown-number';
     this.log('countdown starting:', count);
 
     const step = () => {
       count--;
       if (count > 0) {
-        overlay.textContent = count;
+        display.textContent = count;
+        // Re-trigger animation by removing and re-adding class
+        display.className = '';
+        void display.offsetWidth; // force reflow
+        display.className = 'countdown-number';
         setTimeout(step, 1000);
       } else {
-        // Start playing
-        this.log('countdown complete — starting rally');
-        this.stateMachine.transition('COUNTDOWN_COMPLETE');
-        this.ui.show('hud');
-        this.ball.reset();
-        this.serveBall();
+        // Show "GO!"
+        display.textContent = 'GO!';
+        display.className = '';
+        void display.offsetWidth;
+        display.className = 'countdown-go';
+        setTimeout(() => {
+          this.log('countdown complete — starting rally');
+          this.stateMachine.transition('COUNTDOWN_COMPLETE');
+          this.ui.show('hud');
+          this.ball.reset();
+          this.serveBall();
+        }, 800);
       }
     };
     setTimeout(step, 1000);
